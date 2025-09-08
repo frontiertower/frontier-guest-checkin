@@ -676,47 +676,58 @@ export default function CheckInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted">
-      <div className="container mx-auto px-4 py-4 sm:py-8 max-w-2xl">
-        <div className="text-center mb-8">
-          {/* Logo */}
-          <div className="mb-6 flex justify-center">
-            <Logo size="lg" priority className="h-12 sm:h-16 md:h-20 lg:h-24" />
+    <div className="min-h-screen bg-muted relative">
+      {checkInState === 'idle' ? (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg px-4" style={{ marginTop: '-80px' }}>
+          {/* Header positioned above the button */}
+          <div className="text-center mb-12">
+            <div className="mb-4 flex justify-center">
+              <Logo size="lg" priority className="h-12 sm:h-16 md:h-20 lg:h-24" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Guest Check-In Station</h1>
           </div>
           
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2">Guest Check-In Station</h1>
-        </div>
-
-        <div className="w-full max-w-lg mx-auto">
-          {checkInState === 'idle' ? (
-            <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
-              <div className="text-center space-y-6">
-                
-                <div className="space-y-3">
-                  <button
-                    onClick={startCheckIn}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-6 px-8 rounded-xl shadow-lg hover:shadow-md transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-center gap-3">
-                      <QrCode className="h-6 w-6" />
-                      <div className="text-center">
-                        <div className="text-lg font-bold">Tap to Start Check-In</div>
-                        <div className="text-sm opacity-90">Scan your host QR code</div>
-                      </div>
+          {/* Button - this is what's actually centered in viewport */}
+          <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
+            <div className="text-center space-y-6">
+              <div className="space-y-3">
+                <button
+                  onClick={startCheckIn}
+                  className="w-full bg-primary hover:bg-primary-hover text-primary-foreground font-semibold py-6 px-8 rounded-xl shadow-lg hover:shadow-md transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
+                >
+                  <div className="flex items-center justify-center gap-3">
+                    <QrCode className="h-6 w-6" />
+                    <div className="text-center">
+                      <div className="text-lg font-bold">Check In Guests</div>
+                      <div className="text-sm opacity-90">Scan the QR code from your Invites page</div>
                     </div>
-                  </button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Get your QR code from the Invites page on your phone
-                  </p>
-                </div>
+                  </div>
+                </button>
+                <p className="text-xs text-center text-muted-foreground">
+                  For hosts only • Not for guest use
+                </p>
               </div>
             </div>
-          ) : checkInState === 'scanning' ? (
-            <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
+          </div>
+        </div>
+      ) : (
+        <div className="container mx-auto px-4 py-4 sm:py-8 max-w-2xl">
+          <div className="text-center mb-8">
+            {/* Logo */}
+            <div className="mb-6 flex justify-center">
+              <Logo size="lg" priority className="h-12 sm:h-16 md:h-20 lg:h-24" />
+            </div>
+            
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2">Guest Check-In Station</h1>
+          </div>
+
+          <div className="w-full max-w-lg mx-auto">
+            {checkInState === 'scanning' ? (
+              <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
               <div className="mb-4">
                 <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-2">Scan Your QR Code</h2>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Show your QR code from the Invites page
+                  Position your check-in QR code in view
                 </p>
                 
                 {cameras.length > 1 && !isIpadDevice && (
@@ -753,7 +764,7 @@ export default function CheckInPage() {
                   <div className="absolute inset-0 flex items-center justify-center text-white bg-black/50">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                      <p>{isSwitchingCamera ? 'Switching camera...' : 'Initializing camera...'}</p>
+                      <p>Preparing camera...</p>
                     </div>
                   </div>
                 )}
@@ -875,17 +886,18 @@ export default function CheckInPage() {
               </div>
             </div>
           )}
-        </div>
+          </div>
 
-        <div className="text-center mt-6 sm:mt-8">
-          <p className="text-xs sm:text-sm text-muted-foreground mb-2">
-            Compatible with QR codes, barcodes, and all major code formats
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Optimized for iPad Safari compatibility
-          </p>
+          <div className="text-center mt-6 sm:mt-8">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-2">
+              Compatible with QR codes, barcodes, and all major code formats
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Optimized for iPad Safari compatibility
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {checkInState === 'override-required' && overrideData && (
         <OverrideDialog
