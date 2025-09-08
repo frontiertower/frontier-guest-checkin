@@ -7,6 +7,7 @@ import { GuestSelection } from '@/components/GuestSelection';
 import { OverrideDialog } from '@/components/OverrideDialog';
 import { useAuth } from '@/hooks/use-auth';
 import { Logo } from '@/components/ui/logo';
+import { QrCode, ArrowLeft } from 'lucide-react';
 
 interface CameraDevice {
   deviceId: string;
@@ -157,7 +158,7 @@ export default function CheckInPage() {
   const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [checkInState, setCheckInState] = useState<'scanning' | 'guest-selection' | 'processing' | 'success' | 'error' | 'override-required'>('scanning');
+  const [checkInState, setCheckInState] = useState<'idle' | 'scanning' | 'guest-selection' | 'processing' | 'success' | 'error' | 'override-required'>('idle');
   const [overrideData, setOverrideData] = useState<{
     guestData?: GuestData | string;
     currentCount: number;
@@ -176,6 +177,7 @@ export default function CheckInPage() {
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
+  const [isIpadDevice, setIsIpadDevice] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -209,6 +211,10 @@ export default function CheckInPage() {
   useEffect(() => {
     const initializeScanner = async () => {
       try {
+        // Detect iPad after mount when navigator is available
+        const isIpad = isIPad();
+        setIsIpadDevice(isIpad);
+        
         // Check if QR scanner is supported
         const hasCamera = await QrScanner.hasCamera();
         if (!hasCamera) {
@@ -227,43 +233,39 @@ export default function CheckInPage() {
 
         setHasPermission(true);
         
-        // Get available cameras with retry for iOS
-        let availableCameras = await QrScanner.listCameras(true);
-        
-        // On iOS, sometimes we need to retry after permission grant
-        if (isIOSSafari() && availableCameras.length === 0) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          availableCameras = await QrScanner.listCameras(true);
-        }
-        
-        const cameraDevices = availableCameras.map(camera => ({
-          deviceId: camera.id,
-          label: camera.label
-        }));
-        
-        setCameras(cameraDevices);
-        
-        // Camera preference based on device
-        let preferredCamera;
-        
-        if (isIPad()) {
-          // On iPad, prefer front camera for easier QR scanning
-          const frontCamera = availableCameras.find(camera => 
-            camera.label.toLowerCase().includes('front') || 
-            camera.label.toLowerCase().includes('user')
-          );
-          preferredCamera = frontCamera || availableCameras[0];
+        // For iPad, skip camera enumeration and use facingMode directly
+        if (isIpad) {
+          // iPad: Use front camera with facingMode, no enumeration needed
+          setSelectedCamera('user'); // Use 'user' as a special marker for front camera
+          setCameras([]); // No camera list needed for iPad
         } else {
-          // On other devices, prefer back camera
+          // Other devices: enumerate cameras normally
+          // Get available cameras with retry for iOS
+          let availableCameras = await QrScanner.listCameras(true);
+          
+          // On iOS, sometimes we need to retry after permission grant
+          if (isIOSSafari() && availableCameras.length === 0) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            availableCameras = await QrScanner.listCameras(true);
+          }
+          
+          const cameraDevices = availableCameras.map(camera => ({
+            deviceId: camera.id,
+            label: camera.label
+          }));
+          
+          setCameras(cameraDevices);
+          
+          // Prefer back camera for non-iPad devices
           const backCamera = availableCameras.find(camera => 
             camera.label.toLowerCase().includes('back') || 
             camera.label.toLowerCase().includes('rear') ||
             camera.label.toLowerCase().includes('environment')
           );
-          preferredCamera = backCamera || availableCameras[0];
+          const preferredCamera = backCamera || availableCameras[0];
+          
+          setSelectedCamera(preferredCamera?.id || null);
         }
-        
-        setSelectedCamera(preferredCamera?.id || null);
         
         setIsLoading(false);
       } catch (error) {
@@ -320,6 +322,14 @@ export default function CheckInPage() {
     setCheckInResult(null);
     setErrorMessage(null);
     setOverrideData(null);
+    setCheckInState('idle');
+    setIsScanning(false);
+    if (qrScannerRef.current) {
+      qrScannerRef.current.stop();
+    }
+  };
+
+  const startCheckIn = () => {
     setCheckInState('scanning');
     setIsScanning(true);
     startScanner();
@@ -511,22 +521,24 @@ export default function CheckInPage() {
         highlightCodeOutline: true,
       };
       
-      if (isIOSSafari()) {
-        // For iOS Safari, use facingMode constraints for better compatibility
+      // Special handling for iPad - use facingMode directly
+      if (isIpadDevice && selectedCamera === 'user') {
+        // iPad: Use front camera with facingMode
+        cameraConfig.preferredCamera = 'user';
+        cameraConfig.maxScansPerSecond = 5; // Reduce scan frequency for stability
+      } else if (isIOSSafari()) {
+        // Other iOS devices: try to use facingMode if possible
         const camera = cameras.find(c => c.deviceId === selectedCamera);
         const facingMode = camera ? getFacingMode(camera.label) : undefined;
         
         if (facingMode) {
-          // Use facingMode for iOS Safari (more reliable)
           cameraConfig.preferredCamera = facingMode;
         } else {
-          // If we can't determine facing mode, try deviceId but with iOS-specific handling
           cameraConfig.preferredCamera = selectedCamera;
-          // Add iOS-specific constraints
-          cameraConfig.maxScansPerSecond = 5; // Reduce scan frequency for stability
+          cameraConfig.maxScansPerSecond = 5;
         }
       } else {
-        // For other browsers, use deviceId directly
+        // Other browsers: use deviceId directly
         cameraConfig.preferredCamera = selectedCamera;
       }
 
@@ -564,7 +576,7 @@ export default function CheckInPage() {
 
   // Start scanner when camera is selected and scanning is enabled
   useEffect(() => {
-    if (isScanning && selectedCamera && hasPermission) {
+    if (isScanning && selectedCamera && hasPermission && checkInState === 'scanning') {
       startScanner();
     } else {
       stopScanner();
@@ -573,7 +585,7 @@ export default function CheckInPage() {
     return () => {
       stopScanner();
     };
-  }, [isScanning, selectedCamera, hasPermission, startScanner]);
+  }, [isScanning, selectedCamera, hasPermission, checkInState, startScanner]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -587,7 +599,7 @@ export default function CheckInPage() {
 
   // Handle camera switching
   const handleCameraChange = async (cameraId: string) => {
-    if (cameraId === selectedCamera || isSwitchingCamera) return;
+    if (cameraId === selectedCamera || isSwitchingCamera || isIpadDevice) return;
     
     try {
       setIsSwitchingCamera(true);
@@ -672,20 +684,42 @@ export default function CheckInPage() {
             <Logo size="lg" priority className="h-12 sm:h-16 md:h-20 lg:h-24" />
           </div>
           
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2">Guest Check-In</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Scan QR code to check in guests</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2">Guest Check-In Station</h1>
         </div>
 
         <div className="w-full max-w-lg mx-auto">
-          {checkInState === 'scanning' ? (
+          {checkInState === 'idle' ? (
+            <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
+              <div className="text-center space-y-6">
+                
+                <div className="space-y-3">
+                  <button
+                    onClick={startCheckIn}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-6 px-8 rounded-xl shadow-lg hover:shadow-md transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <QrCode className="h-6 w-6" />
+                      <div className="text-center">
+                        <div className="text-lg font-bold">Tap to Start Check-In</div>
+                        <div className="text-sm opacity-90">Scan your host QR code</div>
+                      </div>
+                    </div>
+                  </button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Get your QR code from the Invites page on your phone
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : checkInState === 'scanning' ? (
             <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
               <div className="mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-2">Scan QR Code</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-2">Scan Your QR Code</h2>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Position the QR code within the camera view
+                  Show your QR code from the Invites page
                 </p>
                 
-                {cameras.length > 1 && !isIPad() && (
+                {cameras.length > 1 && !isIpadDevice && (
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Select Camera:
@@ -727,10 +761,11 @@ export default function CheckInPage() {
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => setIsScanning(false)}
-                  className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg"
+                  onClick={resetScanner}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2"
                 >
-                  Cancel
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
                 </button>
               </div>
             </div>
