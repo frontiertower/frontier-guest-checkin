@@ -21,6 +21,17 @@ if (typeof globalThis.fetch === 'undefined') {
   globalThis.fetch = jest.fn();
 }
 
+// Add Response polyfill for browser API testing
+if (typeof globalThis.Response === 'undefined') {
+  globalThis.Response = class MockResponse {
+    constructor(public body: any, public init: ResponseInit = {}) {}
+    get status() { return this.init.status || 200; }
+    get ok() { return this.status >= 200 && this.status < 300; }
+    async json() { return JSON.parse(this.body || '{}'); }
+    async text() { return this.body || ''; }
+  } as any;
+}
+
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-for-testing-only';

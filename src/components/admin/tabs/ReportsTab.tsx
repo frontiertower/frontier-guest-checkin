@@ -120,7 +120,7 @@ export default function ReportsTab({ isActive = false }: ReportsTabProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{executiveReport.conversions.overallConversion}%</div>
-                  <p className="text-xs text-muted-foreground">Invitation to visit</p>
+                  <p className="text-xs text-muted-foreground">Invites to check-ins</p>
                 </CardContent>
               </Card>
             </div>

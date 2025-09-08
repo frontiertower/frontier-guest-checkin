@@ -289,7 +289,7 @@ describe('Database Integration Tests', () => {
         blacklistedAt: null,
         termsAcceptedAt: null,
         createdAt: new Date(),
-        updatedAt: new Date(),
+        // Guest model doesn't have updatedAt field
       };
 
       const createdGuest = await prisma.guest.create({ data: minimalGuest });
@@ -297,6 +297,30 @@ describe('Database Integration Tests', () => {
       expect(createdGuest.phone).toBeNull();
       expect(createdGuest.blacklistedAt).toBeNull();
       expect(createdGuest.termsAcceptedAt).toBeNull();
+    });
+
+    it('should create guest with email-only for invitation flow', async () => {
+      const prisma = testDb.getPrisma();
+      
+      // Test the exact pattern used in invitation creation
+      // This would catch the Prisma validation error we encountered
+      const emailOnlyGuest = {
+        email: dataHelpers.generateTestEmail('email-only'),
+        name: '', // Empty string as placeholder
+        profileCompleted: false,
+        // Other nullable fields omitted
+      };
+
+      // This should succeed without Prisma validation errors
+      const createdGuest = await prisma.guest.create({ data: emailOnlyGuest });
+      
+      // Verify fields
+      expect(createdGuest.email).toContain('email-only');
+      expect(createdGuest.name).toBe(''); // Empty string placeholder
+      expect(createdGuest.country).toBeNull(); // Omitted fields are null
+      expect(createdGuest.phone).toBeNull();
+      expect(createdGuest.contactMethod).toBeNull();
+      expect(createdGuest.profileCompleted).toBe(false);
     });
 
     it('should handle large datasets efficiently', async () => {

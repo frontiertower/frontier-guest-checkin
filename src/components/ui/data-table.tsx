@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 export interface Column<T> {
   key: keyof T | string;
   label: string;
-  render?: (value: any, item: T) => React.ReactNode;
+  render?: (value: unknown, item: T) => React.ReactNode;
   className?: string;
 }
 
@@ -22,11 +22,11 @@ interface DataTableProps<T> {
   containerClassName?: string;
 }
 
-function getNestedValue(obj: any, path: string) {
+function getNestedValue(obj: Record<string, unknown>, path: string) {
   return path.split('.').reduce((current, key) => current?.[key], obj);
 }
 
-export function DataTable<T extends Record<string, any>>({ 
+export function DataTable<T extends Record<string, unknown>>({ 
   data, 
   columns, 
   searchable = false,

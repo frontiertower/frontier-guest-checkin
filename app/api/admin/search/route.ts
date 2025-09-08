@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // Search guests
     if (type === 'all' || type === 'guests') {
-      const guestWhere: any = {
+      const guestWhere: Record<string, unknown> = {
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
           { email: { contains: query, mode: 'insensitive' } },

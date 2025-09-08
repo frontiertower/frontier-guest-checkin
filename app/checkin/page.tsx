@@ -13,6 +13,54 @@ interface CameraDevice {
   label: string;
 }
 
+// Detect iOS Safari for camera handling
+function isIOSSafari(): boolean {
+  const ua = navigator.userAgent;
+  const iOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+  const safari = /^((?!chrome|android).)*safari/i.test(ua);
+  return iOS && safari;
+}
+
+// Detect iPad specifically (handles iPadOS 13+ desktop mode)
+function isIPad(): boolean {
+  const ua = navigator.userAgent;
+  
+  // Traditional iPad detection
+  if (/iPad/.test(ua) && !(window as any).MSStream) {
+    return true;
+  }
+  
+  // iPadOS 13+ desktop mode detection
+  // iPadOS reports as "MacIntel" when in desktop mode but has touch support
+  if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 0) {
+    return true;
+  }
+  
+  // Additional fallback: check for navigator.standalone (iOS Safari only)
+  if (navigator.platform === 'MacIntel' && typeof (navigator as any).standalone !== 'undefined') {
+    return true;
+  }
+  
+  // Final fallback: Macintosh user agent with touch events
+  if (/Macintosh/.test(ua) && 'ontouchend' in document) {
+    return true;
+  }
+  
+  return false;
+}
+
+// Get facing mode from camera label
+function getFacingMode(label: string): 'user' | 'environment' | undefined {
+  const lowerLabel = label.toLowerCase();
+  if (lowerLabel.includes('front') || lowerLabel.includes('user')) {
+    return 'user';
+  }
+  if (lowerLabel.includes('back') || lowerLabel.includes('rear') || lowerLabel.includes('environment')) {
+    return 'environment';
+  }
+  return undefined;
+}
+
 // Get appropriate error icon based on the error type
 function getErrorIcon(errorMessage: string | null): string {
   if (!errorMessage) return '❌';
@@ -127,8 +175,36 @@ export default function CheckInPage() {
     discountEmailSent?: boolean;
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Check and request camera permissions
+  const checkCameraPermissions = useCallback(async () => {
+    try {
+      // First check if we can enumerate devices (indicates permission)
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      
+      if (videoDevices.length > 0 && videoDevices[0].label !== '') {
+        // We have permission (labels are available)
+        return true;
+      }
+      
+      // Try to request permission
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      
+      // Stop the stream immediately after getting permission
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     const initializeScanner = async () => {
@@ -141,10 +217,25 @@ export default function CheckInPage() {
           return;
         }
 
+        // Check/request permissions
+        const hasPermission = await checkCameraPermissions();
+        if (!hasPermission) {
+          setHasPermission(false);
+          setIsLoading(false);
+          return;
+        }
+
         setHasPermission(true);
         
-        // Get available cameras
-        const availableCameras = await QrScanner.listCameras(true);
+        // Get available cameras with retry for iOS
+        let availableCameras = await QrScanner.listCameras(true);
+        
+        // On iOS, sometimes we need to retry after permission grant
+        if (isIOSSafari() && availableCameras.length === 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          availableCameras = await QrScanner.listCameras(true);
+        }
+        
         const cameraDevices = availableCameras.map(camera => ({
           deviceId: camera.id,
           label: camera.label
@@ -152,14 +243,26 @@ export default function CheckInPage() {
         
         setCameras(cameraDevices);
         
-        // Prefer back camera
-        const backCamera = availableCameras.find(camera => 
-          camera.label.toLowerCase().includes('back') || 
-          camera.label.toLowerCase().includes('rear') ||
-          camera.label.toLowerCase().includes('environment')
-        );
+        // Camera preference based on device
+        let preferredCamera;
         
-        const preferredCamera = backCamera || availableCameras[0];
+        if (isIPad()) {
+          // On iPad, prefer front camera for easier QR scanning
+          const frontCamera = availableCameras.find(camera => 
+            camera.label.toLowerCase().includes('front') || 
+            camera.label.toLowerCase().includes('user')
+          );
+          preferredCamera = frontCamera || availableCameras[0];
+        } else {
+          // On other devices, prefer back camera
+          const backCamera = availableCameras.find(camera => 
+            camera.label.toLowerCase().includes('back') || 
+            camera.label.toLowerCase().includes('rear') ||
+            camera.label.toLowerCase().includes('environment')
+          );
+          preferredCamera = backCamera || availableCameras[0];
+        }
+        
         setSelectedCamera(preferredCamera?.id || null);
         
         setIsLoading(false);
@@ -171,7 +274,7 @@ export default function CheckInPage() {
     };
 
     initializeScanner();
-  }, []);
+  }, [checkCameraPermissions]);
 
 
   const handleScanSuccess = useCallback((result: QrScanner.ScanResult) => {
@@ -368,33 +471,90 @@ export default function CheckInPage() {
     }
   };
 
+  const cleanupVideoStream = useCallback(() => {
+    // Stop and cleanup any existing video streams
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
   const startScanner = useCallback(async () => {
     if (!videoRef.current || !selectedCamera) return;
 
     try {
-      // Clean up existing scanner
+      setIsSwitchingCamera(true);
+      
+      // Clean up existing scanner and streams
       if (qrScannerRef.current) {
+        await qrScannerRef.current.stop();
         qrScannerRef.current.destroy();
+        qrScannerRef.current = null;
+      }
+      
+      cleanupVideoStream();
+      
+      // Small delay for iOS to release camera resources
+      if (isIOSSafari()) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      // Determine camera configuration based on platform
+      let cameraConfig: any = {
+        onDecodeError: handleScanError,
+        highlightScanRegion: true,
+        highlightCodeOutline: true,
+      };
+      
+      if (isIOSSafari()) {
+        // For iOS Safari, use facingMode constraints for better compatibility
+        const camera = cameras.find(c => c.deviceId === selectedCamera);
+        const facingMode = camera ? getFacingMode(camera.label) : undefined;
+        
+        if (facingMode) {
+          // Use facingMode for iOS Safari (more reliable)
+          cameraConfig.preferredCamera = facingMode;
+        } else {
+          // If we can't determine facing mode, try deviceId but with iOS-specific handling
+          cameraConfig.preferredCamera = selectedCamera;
+          // Add iOS-specific constraints
+          cameraConfig.maxScansPerSecond = 5; // Reduce scan frequency for stability
+        }
+      } else {
+        // For other browsers, use deviceId directly
+        cameraConfig.preferredCamera = selectedCamera;
       }
 
       // Create new scanner
       qrScannerRef.current = new QrScanner(
         videoRef.current,
         handleScanSuccess,
-        {
-          onDecodeError: handleScanError,
-          preferredCamera: selectedCamera,
-          highlightScanRegion: true,
-          highlightCodeOutline: true,
-        }
+        cameraConfig
       );
 
       await qrScannerRef.current.start();
+      setIsSwitchingCamera(false);
     } catch (error) {
       console.error('Failed to start scanner:', error);
-      setHasPermission(false);
+      setIsSwitchingCamera(false);
+      
+      // Check if we still have camera permissions
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasVideoInput = devices.some(d => d.kind === 'videoinput');
+        if (!hasVideoInput) {
+          setHasPermission(false);
+        }
+      } catch (e) {
+        setHasPermission(false);
+      }
     }
-  }, [selectedCamera, handleScanSuccess]);
+  }, [selectedCamera, handleScanSuccess, cameras, cleanupVideoStream]);
 
   const stopScanner = () => {
     if (qrScannerRef.current) {
@@ -421,14 +581,54 @@ export default function CheckInPage() {
       if (qrScannerRef.current) {
         qrScannerRef.current.destroy();
       }
+      cleanupVideoStream();
     };
-  }, []);
+  }, [cleanupVideoStream]);
 
   // Handle camera switching
   const handleCameraChange = async (cameraId: string) => {
-    setSelectedCamera(cameraId);
-    if (qrScannerRef.current) {
-      await qrScannerRef.current.setCamera(cameraId);
+    if (cameraId === selectedCamera || isSwitchingCamera) return;
+    
+    try {
+      setIsSwitchingCamera(true);
+      
+      // For iOS Safari, we need to fully recreate the scanner
+      if (isIOSSafari()) {
+        // Stop current scanner with proper cleanup
+        if (qrScannerRef.current) {
+          await qrScannerRef.current.stop();
+          qrScannerRef.current.destroy();
+          qrScannerRef.current = null;
+        }
+        
+        // Comprehensive stream cleanup for iOS
+        cleanupVideoStream();
+        
+        // Force garbage collection delay for iOS Safari
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Update selected camera and let useEffect restart scanner
+        setSelectedCamera(cameraId);
+        
+        // Additional delay for iOS camera resource management
+        await new Promise(resolve => setTimeout(resolve, 300));
+      } else {
+        // For other browsers, try the normal setCamera method
+        setSelectedCamera(cameraId);
+        if (qrScannerRef.current) {
+          try {
+            await qrScannerRef.current.setCamera(cameraId);
+          } catch (error) {
+            console.error('Failed to switch camera, recreating scanner:', error);
+            // If setCamera fails, recreate scanner
+            await startScanner();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Camera switch error:', error);
+    } finally {
+      setIsSwitchingCamera(false);
     }
   };
 
@@ -485,7 +685,7 @@ export default function CheckInPage() {
                   Position the QR code within the camera view
                 </p>
                 
-                {cameras.length > 1 && (
+                {cameras.length > 1 && !isIPad() && (
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Select Camera:
@@ -494,6 +694,7 @@ export default function CheckInPage() {
                       value={selectedCamera || ''}
                       onChange={(e) => handleCameraChange(e.target.value)}
                       className="w-full p-2 border border-border bg-background text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                      disabled={isSwitchingCamera}
                     >
                       {cameras.map((camera) => (
                         <option key={camera.deviceId} value={camera.deviceId}>
@@ -511,13 +712,14 @@ export default function CheckInPage() {
                   className="w-full h-full object-cover"
                   playsInline
                   muted
+                  autoPlay
                 />
                 
-                {!selectedCamera && (
-                  <div className="absolute inset-0 flex items-center justify-center text-white">
+                {(!selectedCamera || isSwitchingCamera) && (
+                  <div className="absolute inset-0 flex items-center justify-center text-white bg-black/50">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                      <p>Initializing camera...</p>
+                      <p>{isSwitchingCamera ? 'Switching camera...' : 'Initializing camera...'}</p>
                     </div>
                   </div>
                 )}

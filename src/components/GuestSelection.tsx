@@ -12,35 +12,35 @@ interface GuestSelectionProps {
 
 export function GuestSelection({ guests, onSelectGuest, onCancel }: GuestSelectionProps) {
   return (
-    <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+    <div className="bg-card dark:bg-surface-2 rounded-xl border border-border/50 dark:border-border/30 shadow-lg dark:shadow-none backdrop-blur-sm p-4 sm:p-6">
       <div className="text-center mb-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
+        <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-2">
           Select Guest to Check In
         </h2>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           Choose which guest you&apos;d like to check in from the QR code
         </p>
       </div>
 
       <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
         {guests.map((guest, index) => (
-          <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow">
+          <Card key={index} className="cursor-pointer hover:bg-surface-3 dark:hover:bg-surface-3 transition-all duration-200 border-border/50 dark:border-border/30 bg-surface-1 dark:bg-surface-1">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-semibold">
+                  <div className="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center">
+                    <span className="text-primary font-semibold">
                       {guest.n.split(' ').map(name => name[0]).join('').toUpperCase()}
                     </span>
                   </div>
                   <div className="text-left">
-                    <h3 className="font-semibold text-gray-800">{guest.n}</h3>
-                    <p className="text-sm text-gray-600">{guest.e}</p>
+                    <h3 className="font-semibold text-foreground">{guest.n}</h3>
+                    <p className="text-sm text-muted-foreground">{guest.e}</p>
                   </div>
                 </div>
                 <Button 
                   onClick={() => onSelectGuest(guest)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2"
+                  className="bg-success hover:bg-success/90 text-success-foreground px-4 py-2"
                 >
                   Select
                 </Button>
@@ -54,7 +54,7 @@ export function GuestSelection({ guests, onSelectGuest, onCancel }: GuestSelecti
         <Button
           onClick={onCancel}
           variant="outline"
-          className="flex-1"
+          className="flex-1 border-border/50 dark:border-border/30"
         >
           Cancel & Scan Again
         </Button>

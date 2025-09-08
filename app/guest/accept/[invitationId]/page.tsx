@@ -133,10 +133,14 @@ export default function GuestAcceptancePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <PageHeader 
-          title="Loading..."
-          description="Please wait while we load your invitation"
-        />
+        <div className="bg-surface-1 dark:bg-surface-1 border-b border-border-subtle dark:border-border-subtle shadow-sm dark:shadow-none">
+          <div className="container mx-auto px-4 py-6">
+            <PageHeader 
+              title="Loading..."
+              subtitle="Please wait while we load your invitation"
+            />
+          </div>
+        </div>
       </div>
     );
   }
@@ -144,20 +148,28 @@ export default function GuestAcceptancePage() {
   if (!invitation) {
     return (
       <div className="min-h-screen bg-background">
-        <PageHeader 
-          title="Invalid Invitation"
-          description="This invitation could not be found"
-        />
+        <div className="bg-surface-1 dark:bg-surface-1 border-b border-border-subtle dark:border-border-subtle shadow-sm dark:shadow-none">
+          <div className="container mx-auto px-4 py-6">
+            <PageHeader 
+              title="Invalid Invitation"
+              subtitle="This invitation could not be found"
+            />
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader 
-        title="Accept Terms & Conditions"
-        description={`Welcome ${invitation.guest.name || 'Guest'}! Please review and accept the terms below.`}
-      />
+      <div className="bg-surface-1 dark:bg-surface-1 border-b border-border-subtle dark:border-border-subtle shadow-sm dark:shadow-none">
+        <div className="container mx-auto px-4 py-6">
+          <PageHeader 
+            title="Accept Terms & Conditions"
+            subtitle={`Welcome ${invitation.guest.name || 'Guest'}! Please review and accept the terms below.`}
+          />
+        </div>
+      </div>
 
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="mb-6 p-4 bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 dark:border-blue-500/30 rounded-lg">

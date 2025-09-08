@@ -288,15 +288,28 @@ export async function validateGuestAcceptance(guestId: string): Promise<Validati
     };
   }
 
-  // For visit-scoped model, check shorter validity (24 hours instead of 365 days)
-  const validityPeriod = acceptance.visitId ? 24 * 60 * 60 * 1000 : 365 * 24 * 60 * 60 * 1000;
-  const expiryDate = new Date(acceptance.acceptedAt.getTime() + validityPeriod);
+  const now = nowInLA();
   
-  if (nowInLA() > expiryDate) {
-    return {
-      isValid: false,
-      error: "Guest's visitor agreement has expired. New terms acceptance required.",
-    };
+  // For visit-scoped acceptances (has visitId), they're only valid for 24 hours
+  // For legacy acceptances (no visitId), they're valid for 365 days
+  if (acceptance.visitId) {
+    // Visit-scoped: 24-hour validity
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    if (acceptance.acceptedAt < twentyFourHoursAgo) {
+      return {
+        isValid: false,
+        error: "Guest's visitor agreement has expired. New terms acceptance required.",
+      };
+    }
+  } else {
+    // Legacy acceptance: 365-day validity
+    const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    if (acceptance.acceptedAt <= oneYearAgo) {
+      return {
+        isValid: false,
+        error: "Guest's visitor agreement has expired. New terms acceptance required.",
+      };
+    }
   }
 
   return { isValid: true };

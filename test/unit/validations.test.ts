@@ -16,6 +16,7 @@ import {
   canUserOverride,
   shouldTriggerDiscount,
   processReturningGuestCheckIn,
+  validateVisitScopedAcceptance,
 } from '@/lib/validations';
 import { nowInLA } from '@/lib/timezone';
 
@@ -337,7 +338,37 @@ describe('Business Rule Validations', () => {
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
       
       (prisma.acceptance.findFirst as jest.Mock).mockResolvedValue({
-        acceptedAt: oneYearAgo
+        acceptedAt: oneYearAgo,
+        visitId: null // Legacy acceptance (365-day validity)
+      });
+
+      const result = await validateGuestAcceptance('guest-123');
+      
+      // At exactly 365 days, it's still valid (> not >= in implementation)
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should allow acceptance 364 days old', async () => {
+      const almostOneYearAgo = new Date();
+      almostOneYearAgo.setDate(almostOneYearAgo.getDate() - 364);
+      
+      (prisma.acceptance.findFirst as jest.Mock).mockResolvedValue({
+        acceptedAt: almostOneYearAgo,
+        visitId: null // Legacy acceptance
+      });
+
+      const result = await validateGuestAcceptance('guest-123');
+      
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should reject acceptance over 1 year old', async () => {
+      // Use the mocked nowInLA date as reference (2025-08-30)
+      const overOneYearAgo = new Date('2024-08-29'); // 366+ days before mocked date
+      
+      (prisma.acceptance.findFirst as jest.Mock).mockResolvedValue({
+        acceptedAt: overOneYearAgo,
+        visitId: null // Legacy acceptance
       });
 
       const result = await validateGuestAcceptance('guest-123');
@@ -346,17 +377,19 @@ describe('Business Rule Validations', () => {
       expect(result.error).toBe("Guest's visitor agreement has expired. New terms acceptance required.");
     });
 
-    it('should allow acceptance 364 days old', async () => {
-      const almostOneYearAgo = new Date();
-      almostOneYearAgo.setDate(almostOneYearAgo.getDate() - 364);
+    it('should reject visit-scoped acceptance after 24 hours', async () => {
+      // Use the mocked nowInLA date as reference (2025-08-30T14:00:00)
+      const over24HoursAgo = new Date('2025-08-29T12:00:00'); // 26 hours before mocked date
       
       (prisma.acceptance.findFirst as jest.Mock).mockResolvedValue({
-        acceptedAt: almostOneYearAgo
+        acceptedAt: over24HoursAgo,
+        visitId: 'visit-123' // Visit-scoped acceptance (24-hour validity)
       });
 
       const result = await validateGuestAcceptance('guest-123');
       
-      expect(result.isValid).toBe(true);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe("Guest's visitor agreement has expired. New terms acceptance required.");
     });
   });
 
@@ -505,28 +538,46 @@ describe('Business Rule Validations', () => {
 
   describe('processReturningGuestCheckIn', () => {
     it('should auto-renew expired acceptance for returning guests', async () => {
-      // First validation fails due to expired acceptance
+      // Mock a returning guest (has previous acceptance)
+      const veryOldAcceptance = new Date('2020-01-01');
+      const newAcceptance = new Date();
+      
+      // Mock validateVisitScopedAcceptance - it makes TWO db calls per invocation
+      // First invocation (before renewal): 2 calls
+      // Second invocation (after renewal): 2 calls  
+      // Plus 1 call to check if guest has any previous acceptance
       (prisma.acceptance.findFirst as jest.Mock)
-        .mockResolvedValueOnce({
-          acceptedAt: new Date('2020-01-01') // Very old
+        .mockResolvedValueOnce(null) // validateVisitScopedAcceptance call 1: no visit-scoped
+        .mockResolvedValueOnce(null) // validateVisitScopedAcceptance call 2: no legacy within 24h
+        .mockResolvedValueOnce({ // Check for any previous acceptance (returning guest check)
+          acceptedAt: veryOldAcceptance,
+          visitId: null
         })
-        .mockResolvedValueOnce({
-          acceptedAt: new Date('2020-01-01')
-        })
-        .mockResolvedValueOnce({
-          acceptedAt: new Date() // After renewal
+        .mockResolvedValueOnce({ // After renewal - validateVisitScopedAcceptance call 1: found new acceptance
+          acceptedAt: newAcceptance,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          visitId: null
         });
 
+      // Mock the renewal process
+      (prisma.acceptance.create as jest.Mock).mockResolvedValue({
+        acceptedAt: newAcceptance,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+      });
+
+      // Mock other required validations
+      (prisma.guest.findUnique as jest.Mock).mockResolvedValue({
+        blacklistedAt: null
+      });
+      (prisma.location.findUnique as jest.Mock).mockResolvedValue({
+        settings: { checkInCutoffHour: 23 }
+      });
+      (prisma.visit.count as jest.Mock).mockResolvedValue(1); // Under limit
       (prisma.policy.findFirst as jest.Mock).mockResolvedValue({
         hostConcurrentLimit: 3,
         guestMonthlyLimit: 3
       });
-      (prisma.visit.count as jest.Mock).mockResolvedValue(0);
       (prisma.visit.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.guest.findUnique as jest.Mock).mockResolvedValue({
-        blacklistedAt: null
-      });
-      (prisma.acceptance.create as jest.Mock).mockResolvedValue({});
 
       const result = await processReturningGuestCheckIn(
         'host-123',
@@ -536,22 +587,31 @@ describe('Business Rule Validations', () => {
         'loc-789'
       );
 
-      expect(result.isValid).toBe(true);
       expect(result.acceptanceRenewed).toBe(true);
+      expect(result.isValid).toBe(true);
       expect(prisma.acceptance.create).toHaveBeenCalled();
     });
 
     it('should not renew for first-time guests', async () => {
-      (prisma.acceptance.findFirst as jest.Mock).mockResolvedValue(null);
+      // No previous acceptance (first-time guest)
+      (prisma.acceptance.findFirst as jest.Mock)
+        .mockResolvedValueOnce(null) // validateVisitScopedAcceptance call 1: no visit-scoped
+        .mockResolvedValueOnce(null) // validateVisitScopedAcceptance call 2: no legacy within 24h
+        .mockResolvedValueOnce(null); // Check for any previous acceptance - none found (first-time guest)
+      
+      // Mock other validations
+      (prisma.guest.findUnique as jest.Mock).mockResolvedValue({
+        blacklistedAt: null
+      });
+      (prisma.location.findUnique as jest.Mock).mockResolvedValue({
+        settings: { checkInCutoffHour: 23 }
+      });
       (prisma.policy.findFirst as jest.Mock).mockResolvedValue({
         hostConcurrentLimit: 3,
         guestMonthlyLimit: 3
       });
       (prisma.visit.count as jest.Mock).mockResolvedValue(0);
       (prisma.visit.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.guest.findUnique as jest.Mock).mockResolvedValue({
-        blacklistedAt: null
-      });
 
       const result = await processReturningGuestCheckIn(
         'host-123',
@@ -561,29 +621,39 @@ describe('Business Rule Validations', () => {
         'loc-789'
       );
 
+      // First-time guest should get regular acceptance error, not renewal
       expect(result.isValid).toBe(false);
       expect(result.acceptanceRenewed).toBeUndefined();
       expect(result.error).toContain('needs to accept visitor terms');
+      expect(prisma.acceptance.create).not.toHaveBeenCalled();
     });
 
     it('should handle renewal failure gracefully', async () => {
+      // Mock expired acceptance for returning guest
       (prisma.acceptance.findFirst as jest.Mock)
-        .mockResolvedValueOnce({
-          acceptedAt: new Date('2020-01-01')
-        })
-        .mockResolvedValueOnce({
-          acceptedAt: new Date('2020-01-01')
+        .mockResolvedValueOnce(null) // validateVisitScopedAcceptance call 1: no visit-scoped
+        .mockResolvedValueOnce(null) // validateVisitScopedAcceptance call 2: no legacy within 24h
+        .mockResolvedValueOnce({ // Check for any previous acceptance - found (returning guest)
+          acceptedAt: new Date('2020-01-01'),
+          visitId: null
         });
+      
+      // Mock renewal failure
       (prisma.acceptance.create as jest.Mock).mockRejectedValue(new Error('DB Error'));
+      
+      // Mock other validations
+      (prisma.guest.findUnique as jest.Mock).mockResolvedValue({
+        blacklistedAt: null
+      });
+      (prisma.location.findUnique as jest.Mock).mockResolvedValue({
+        settings: { checkInCutoffHour: 23 }
+      });
       (prisma.policy.findFirst as jest.Mock).mockResolvedValue({
         hostConcurrentLimit: 3,
         guestMonthlyLimit: 3
       });
       (prisma.visit.count as jest.Mock).mockResolvedValue(0);
       (prisma.visit.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.guest.findUnique as jest.Mock).mockResolvedValue({
-        blacklistedAt: null
-      });
 
       const result = await processReturningGuestCheckIn(
         'host-123',
@@ -595,6 +665,83 @@ describe('Business Rule Validations', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.error).toBe('Unable to process guest terms update. Technical support needed.');
+    });
+  });
+
+  describe('validateVisitScopedAcceptance', () => {
+    it('should accept valid visit-scoped acceptance', async () => {
+      const mockAcceptance = {
+        id: 'acc-123',
+        guestId: 'guest-123',
+        visitId: 'visit-123',
+        invitationId: 'inv-123',
+        expiresAt: new Date(Date.now() + 3600000), // 1 hour from now
+        termsVersion: '1.0',
+        visitorAgreementVersion: '1.0',
+        acceptedAt: new Date()
+      };
+
+      (prisma.acceptance.findFirst as jest.Mock).mockResolvedValue(mockAcceptance);
+
+      const result = await validateVisitScopedAcceptance('guest-123', 'inv-123');
+
+      expect(result.isValid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject when no current visit-scoped acceptance found', async () => {
+      // validateVisitScopedAcceptance makes TWO calls to findFirst
+      (prisma.acceptance.findFirst as jest.Mock)
+        .mockResolvedValueOnce(null) // First check for visit-scoped acceptance
+        .mockResolvedValueOnce(null); // Second check for legacy acceptance within 24 hours
+
+      const result = await validateVisitScopedAcceptance('guest-123', 'inv-123');
+
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Guest needs to accept visitor terms for this visit. Email will be sent.');
+    });
+
+    it('should accept legacy acceptance within 24 hours', async () => {
+      const mockLegacyAcceptance = {
+        id: 'acc-legacy',
+        guestId: 'guest-123',
+        visitId: null, // Legacy acceptance before visit creation
+        invitationId: null,
+        expiresAt: null,
+        termsVersion: '1.0',
+        visitorAgreementVersion: '1.0',
+        acceptedAt: new Date(Date.now() - 3600000) // 1 hour ago
+      };
+
+      // validateVisitScopedAcceptance makes TWO calls to findFirst
+      (prisma.acceptance.findFirst as jest.Mock)
+        .mockResolvedValueOnce(null) // First check for visit-scoped acceptance
+        .mockResolvedValueOnce(mockLegacyAcceptance); // Second check for legacy acceptance within 24 hours
+
+      const result = await validateVisitScopedAcceptance('guest-123', 'inv-123');
+
+      expect(result.isValid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should accept invitation-scoped acceptance with null expiration', async () => {
+      const mockAcceptance = {
+        id: 'acc-123',
+        guestId: 'guest-123',
+        visitId: null,
+        invitationId: 'inv-123',
+        expiresAt: null, // Never expires
+        termsVersion: '1.0',
+        visitorAgreementVersion: '1.0',
+        acceptedAt: new Date()
+      };
+
+      (prisma.acceptance.findFirst as jest.Mock).mockResolvedValue(mockAcceptance);
+
+      const result = await validateVisitScopedAcceptance('guest-123', 'inv-123');
+
+      expect(result.isValid).toBe(true);
+      expect(result.error).toBeUndefined();
     });
   });
 });

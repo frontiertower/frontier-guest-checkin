@@ -63,26 +63,26 @@ export function OverrideDialog({
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && handleCancel()}>
-      <DialogContent className="max-w-lg bg-white border border-gray-300 rounded-lg shadow-lg p-6 font-sans">
+      <DialogContent className="max-w-lg bg-card dark:bg-elevated border border-border/50 dark:border-border/30 rounded-xl shadow-lg dark:shadow-none backdrop-blur-sm p-6 font-sans">
         {/* Header */}
-        <div className="border-b border-gray-200 pb-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        <div className="border-b border-border-subtle dark:border-border-subtle pb-4 mb-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4">
             Security Override Required
           </h2>
           
           {/* Capacity Status */}
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-red-500 text-xl">⚠️</span>
-              <p className="text-sm font-medium text-red-800">
+              <span className="text-destructive text-xl">⚠️</span>
+              <p className="text-sm font-medium text-destructive dark:text-destructive">
                 Capacity Limit Exceeded
               </p>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">
-                Active Guests: <span className="font-mono font-semibold text-gray-800">{currentCount}/{maxCount}</span>
+              <span className="text-sm text-muted-foreground">
+                Active Guests: <span className="font-mono font-semibold text-foreground">{currentCount}/{maxCount}</span>
               </span>
-              <div className="bg-red-600 text-white px-2 py-1 text-xs font-medium rounded">
+              <div className="bg-destructive text-destructive-foreground px-2 py-1 text-xs font-medium rounded">
                 OVER LIMIT
               </div>
             </div>
@@ -91,10 +91,10 @@ export function OverrideDialog({
           {/* Guest Name */}
           {guestName && (
             <div className="mt-4">
-              <p className="text-sm font-medium text-gray-700 mb-1">
+              <p className="text-sm font-medium text-muted-foreground mb-1">
                 Requesting Guest
               </p>
-              <p className="text-sm text-gray-800 font-medium">
+              <p className="text-sm text-foreground font-medium">
                 {guestName}
               </p>
             </div>
@@ -102,8 +102,8 @@ export function OverrideDialog({
 
           {/* Error Message */}
           {errorMessage && (
-            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-800 font-medium">
+            <div className="mt-4 bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 rounded-lg p-3">
+              <p className="text-sm text-destructive dark:text-destructive font-medium">
                 {errorMessage}
               </p>
             </div>
@@ -116,16 +116,16 @@ export function OverrideDialog({
           <div>
             <Label 
               htmlFor="override-reason" 
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-foreground mb-2"
             >
-              Override Reason <span className="text-red-500">*</span>
+              Override Reason <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="override-reason"
               placeholder="Please provide a reason for this override (e.g., VIP guest, special event, emergency situation)"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg p-3 text-sm text-black bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none min-h-[80px] placeholder:text-gray-500"
+              className="w-full border border-border/50 dark:border-border/30 rounded-lg p-3 text-sm text-foreground bg-background dark:bg-surface focus:ring-2 focus:ring-ring focus:border-ring resize-none min-h-[80px] placeholder:text-muted-foreground"
               disabled={isSubmitting}
             />
           </div>
@@ -134,9 +134,9 @@ export function OverrideDialog({
           <div>
             <Label 
               htmlFor="override-password" 
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-foreground mb-2"
             >
-              Security Password <span className="text-red-500">*</span>
+              Security Password <span className="text-destructive">*</span>
             </Label>
             <Input
               id="override-password"
@@ -147,11 +147,11 @@ export function OverrideDialog({
                 setPassword(e.target.value);
                 setPasswordError(null);
               }}
-              className={`w-full border ${passwordError ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-300'} rounded-lg p-3 text-sm text-black bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500`}
+              className={`w-full border ${passwordError ? 'border-destructive ring-2 ring-destructive/20' : 'border-border/50 dark:border-border/30'} rounded-lg p-3 text-sm text-foreground bg-background dark:bg-surface focus:ring-2 focus:ring-ring focus:border-ring placeholder:text-muted-foreground`}
               disabled={isSubmitting}
             />
             {passwordError && (
-              <p className="text-xs text-red-600 font-medium mt-1">
+              <p className="text-xs text-destructive font-medium mt-1">
                 {passwordError}
               </p>
             )}
@@ -177,7 +177,7 @@ export function OverrideDialog({
           <Button
             onClick={handleConfirm}
             disabled={!reason.trim() || !password || isSubmitting}
-            className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium disabled:bg-gray-300 disabled:text-gray-500"
+            className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground px-4 py-2 rounded-lg font-medium disabled:bg-muted disabled:text-muted-foreground"
           >
             {isSubmitting ? 'Processing...' : 'Override & Check In'}
           </Button>

@@ -14,11 +14,6 @@ export function useAuth(): UseAuthReturn {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check if user is authenticated by trying to access a protected endpoint
-    checkAuthStatus();
-  }, []);
-
   const checkAuthStatus = async () => {
     try {
       // We'll use the invitations endpoint as a test for authentication
@@ -46,6 +41,11 @@ export function useAuth(): UseAuthReturn {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Check if user is authenticated by trying to access a protected endpoint
+    checkAuthStatus();
+  }, []);
 
   const logout = async () => {
     try {

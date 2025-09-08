@@ -47,7 +47,7 @@ describe('Email Integration Tests', () => {
 
     it('should send invitation email with proper template data', async () => {
       const guest = TestDataFactory.createGuest();
-      const invitation = TestDataFactory.createInvitation(guest.email, testData.host.id);
+      const invitation = TestDataFactory.createInvitation(guest.id, testData.host.id, testData.location.id);
       
       await testDb.getPrisma().guest.create({ data: guest });
       await testDb.getPrisma().invitation.create({ data: invitation });
@@ -76,7 +76,7 @@ describe('Email Integration Tests', () => {
 
     it('should handle email template rendering correctly', async () => {
       const guest = TestDataFactory.createGuest();
-      const invitation = TestDataFactory.createInvitation(guest.email, testData.host.id);
+      const invitation = TestDataFactory.createInvitation(guest.id, testData.host.id, testData.location.id);
 
       await sendInvitationEmail({
         to: guest.email,
@@ -105,7 +105,7 @@ describe('Email Integration Tests', () => {
           email: guest.email,
           name: guest.name,
         });
-        const invitation = TestDataFactory.createInvitation(guest.email, testData.host.id);
+        const invitation = TestDataFactory.createInvitation(guest.id, testData.host.id, testData.location.id);
         
         await testDb.getPrisma().guest.create({ data: guestData });
         await testDb.getPrisma().invitation.create({ data: invitation });
@@ -135,7 +135,7 @@ describe('Email Integration Tests', () => {
       mockResend.emails.send.mockRejectedValue(new Error('SMTP connection failed'));
 
       const guest = TestDataFactory.createGuest();
-      const invitation = TestDataFactory.createInvitation(guest.email, testData.host.id);
+      const invitation = TestDataFactory.createInvitation(guest.id, testData.host.id, testData.location.id);
 
       const result = await sendInvitationEmail({
         to: guest.email,
@@ -165,7 +165,7 @@ describe('Email Integration Tests', () => {
       });
 
       const guest = TestDataFactory.createGuest();
-      const invitation = TestDataFactory.createInvitation(guest.email, testData.host.id);
+      const invitation = TestDataFactory.createInvitation(guest.id, testData.host.id, testData.location.id);
 
       const result = await waitHelpers.retry(
         () => sendInvitationEmail({
@@ -326,8 +326,8 @@ describe('Email Integration Tests', () => {
 
     it('should track email delivery status in database', async () => {
       const guest = TestDataFactory.createGuest();
-      const invitation = TestDataFactory.createInvitation(guest.email, testData.host.id, {
-        sentAt: null, // Not sent yet
+      const invitation = TestDataFactory.createInvitation(guest.id, testData.host.id, testData.location.id, {
+        qrIssuedAt: null, // Not sent yet
       });
       
       await testDb.getPrisma().guest.create({ data: guest });

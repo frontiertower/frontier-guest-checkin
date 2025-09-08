@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAdminData } from '@/contexts/AdminDataContext';
 
 interface AuditTabProps {
-  recentOverrides?: any[];
+  recentOverrides?: Array<Record<string, unknown>>;
   isActive?: boolean;
 }
 

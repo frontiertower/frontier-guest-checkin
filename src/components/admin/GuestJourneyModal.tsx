@@ -359,7 +359,7 @@ export default function GuestJourneyModal({ isOpen, guestId, onClose }: GuestJou
                           <div className="flex items-center gap-2">
                             <h4 className="font-medium text-sm">{event.title}</h4>
                             {/* Override Badge */}
-                            {(event.data as any)?.overrideReason && (
+                            {(event.data as Record<string, unknown>)?.overrideReason && (
                               <Badge variant="outline" className="text-xs bg-yellow-50 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-500/30">
                                 <ShieldAlert className="h-3 w-3 mr-1" />
                                 Override
@@ -373,30 +373,30 @@ export default function GuestJourneyModal({ isOpen, guestId, onClose }: GuestJou
                         <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
                         
                         {/* Acceptance Expiration Info */}
-                        {event.type === 'terms_acceptance' && (event.data as any)?.expiresAt && (
+                        {event.type === 'terms_acceptance' && (event.data as Record<string, unknown>)?.expiresAt && (
                           <div className="mt-1">
                             <span className={`text-xs ${
-                              (event.data as any).isExpired 
+                              (event.data as Record<string, unknown>).isExpired 
                                 ? 'text-red-600 dark:text-red-400' 
                                 : 'text-muted-foreground'
                             }`}>
-                              {(event.data as any).isExpired 
+                              {(event.data as Record<string, unknown>).isExpired 
                                 ? '⚠️ This acceptance has expired'
-                                : `Valid until ${new Date((event.data as any).expiresAt).toLocaleDateString()}`}
+                                : `Valid until ${new Date((event.data as Record<string, unknown>).expiresAt).toLocaleDateString()}`}
                             </span>
                           </div>
                         )}
                         
                         {/* Additional Host Context */}
-                        {(event.data as any)?.invitationHost && (event.data as any)?.isHostMismatch && (
+                        {(event.data as Record<string, unknown>)?.invitationHost && (event.data as Record<string, unknown>)?.isHostMismatch && (
                           <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded text-xs">
                             <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
                               <Mail className="h-3 w-3" />
-                              <span>Originally invited by: {(event.data as any).invitationHost.name}</span>
+                              <span>Originally invited by: {(event.data as Record<string, unknown>).invitationHost.name}</span>
                             </div>
                             <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400 mt-1">
                               <UserCheck className="h-3 w-3" />
-                              <span>Visited: {(event.data as any).hostName}</span>
+                              <span>Visited: {(event.data as Record<string, unknown>).hostName}</span>
                             </div>
                           </div>
                         )}

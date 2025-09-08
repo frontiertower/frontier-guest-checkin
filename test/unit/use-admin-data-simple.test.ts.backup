@@ -139,22 +139,19 @@ describe('Admin Data Hooks - Interface Tests', () => {
 
   describe('useExecutiveReport', () => {
     it('should return expected interface', () => {
-      const { result } = renderHook(() => useExecutiveReport());
+      const result = useExecutiveReport();
       
-      expect(result.current).toHaveProperty('report');
-      expect(result.current).toHaveProperty('isLoading');
-      expect(result.current).toHaveProperty('loadReport');
-      expect(typeof result.current.loadReport).toBe('function');
+      expect(result).toHaveProperty('report');
+      expect(result).toHaveProperty('isLoading');
+      expect(result).toHaveProperty('loadReport');
+      expect(typeof result.loadReport).toBe('function');
     });
 
     it('should call API with period parameter', async () => {
       mockFetch.mockResolvedValue(new Response('{"period": "monthly"}', { status: 200 }));
       
-      const { result } = renderHook(() => useExecutiveReport());
-      
-      await act(async () => {
-        await result.current.loadReport('monthly');
-      });
+      const { loadReport } = useExecutiveReport();
+      await loadReport('monthly');
       
       expect(mockFetch).toHaveBeenCalledWith('/api/admin/reports?period=monthly');
     });
@@ -162,30 +159,26 @@ describe('Admin Data Hooks - Interface Tests', () => {
 
   describe('useGlobalSearch', () => {
     it('should return expected interface', () => {
-      const { result } = renderHook(() => useGlobalSearch());
+      const result = useGlobalSearch();
       
-      expect(result.current).toHaveProperty('searchResults');
-      expect(result.current).toHaveProperty('isLoading');
-      expect(result.current).toHaveProperty('performSearch');
-      expect(typeof result.current.performSearch).toBe('function');
+      expect(result).toHaveProperty('searchResults');
+      expect(result).toHaveProperty('isLoading');
+      expect(result).toHaveProperty('performSearch');
+      expect(typeof result.performSearch).toBe('function');
     });
 
     it('should call search API with encoded query', async () => {
       mockFetch.mockResolvedValue(new Response('{"results": []}', { status: 200 }));
       
-      const { result } = renderHook(() => useGlobalSearch());
-      await act(async () => {
-        await result.current.performSearch('test@example.com');
-      });
+      const { performSearch } = useGlobalSearch();
+      await performSearch('test@example.com');
       
       expect(mockFetch).toHaveBeenCalledWith('/api/admin/search?q=test%40example.com&limit=20');
     });
 
     it('should skip API call for empty search', async () => {
-      const { result } = renderHook(() => useGlobalSearch());
-      await act(async () => {
-        await result.current.performSearch('');
-      });
+      const { performSearch } = useGlobalSearch();
+      await performSearch('');
       
       expect(mockFetch).not.toHaveBeenCalled();
     });
@@ -193,23 +186,21 @@ describe('Admin Data Hooks - Interface Tests', () => {
 
   describe('useGuestJourney', () => {
     it('should return expected interface', () => {
-      const { result } = renderHook(() => useGuestJourney());
+      const result = useGuestJourney();
       
-      expect(result.current).toHaveProperty('selectedGuest');
-      expect(result.current).toHaveProperty('isLoading');
-      expect(result.current).toHaveProperty('loadGuestJourney');
-      expect(result.current).toHaveProperty('clearSelectedGuest');
-      expect(typeof result.current.loadGuestJourney).toBe('function');
-      expect(typeof result.current.clearSelectedGuest).toBe('function');
+      expect(result).toHaveProperty('selectedGuest');
+      expect(result).toHaveProperty('isLoading');
+      expect(result).toHaveProperty('loadGuestJourney');
+      expect(result).toHaveProperty('clearSelectedGuest');
+      expect(typeof result.loadGuestJourney).toBe('function');
+      expect(typeof result.clearSelectedGuest).toBe('function');
     });
 
     it('should call API with guest ID', async () => {
       mockFetch.mockResolvedValue(new Response('{"id": "guest123"}', { status: 200 }));
       
-      const { result } = renderHook(() => useGuestJourney());
-      await act(async () => {
-        await result.current.loadGuestJourney('guest123');
-      });
+      const { loadGuestJourney } = useGuestJourney();
+      await loadGuestJourney('guest123');
       
       expect(mockFetch).toHaveBeenCalledWith('/api/admin/guests/guest123/journey');
     });
@@ -220,10 +211,8 @@ describe('Admin Data Hooks - Interface Tests', () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       
-      const { result } = renderHook(() => useAdminStats());
-      await act(async () => {
-        await result.current.loadStats();
-      });
+      const { loadStats } = useAdminStats();
+      await loadStats();
       
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Error',
@@ -237,10 +226,8 @@ describe('Admin Data Hooks - Interface Tests', () => {
     it('should handle HTTP error responses', async () => {
       mockFetch.mockResolvedValue(new Response('Not found', { status: 404 }));
       
-      const { result } = renderHook(() => useAdminPolicies());
-      await act(async () => {
-        await result.current.loadPolicies();
-      });
+      const { loadPolicies } = useAdminPolicies();
+      await loadPolicies();
       
       // Should complete without throwing but not update state
       expect(mockFetch).toHaveBeenCalledWith('/api/admin/policies');

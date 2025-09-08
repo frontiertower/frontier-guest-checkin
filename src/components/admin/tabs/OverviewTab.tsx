@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, UserCheck, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Users, UserCheck, TrendingUp, Gift } from 'lucide-react';
 import { useAdminData } from '@/contexts/AdminDataContext';
 
 
@@ -141,13 +141,13 @@ export default function OverviewTab({ onDataLoaded }: OverviewTabProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Issues</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Discount Conversions</CardTitle>
+            <Gift className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.system.blacklistedGuests}</div>
+            <div className="text-2xl font-bold">{stats.system.discountsSent}</div>
             <p className="text-xs text-muted-foreground">
-              Blacklisted guests
+              Took up membership offer
             </p>
           </CardContent>
         </Card>

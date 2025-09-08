@@ -96,13 +96,13 @@ function AdminPageContent() {
   
   // Track if we're waiting for search (user has typed but debounce hasn't fired yet)
   const [isTyping, setIsTyping] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Define columns for guest table
   const guestColumns: Column<Guest>[] = [
     { key: 'name', label: 'Guest', className: 'font-medium' },
     { key: 'email', label: 'Email' },
-    { key: 'country', label: 'Country', render: (value) => value || 'Unknown' },
+    { key: 'country', label: 'Country', render: (value) => (value as string) || 'Unknown' },
     { key: 'recentVisits', label: 'Visits (30d)' },
     { key: 'lifetimeVisits', label: 'Total Visits' },
     {
@@ -304,7 +304,7 @@ function AdminPageContent() {
   
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-muted flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="mb-6">
             <Logo size="lg" className="mx-auto mb-4" />
@@ -318,7 +318,7 @@ function AdminPageContent() {
 
 
   return (
-    <div className="min-h-screen bg-muted admin-container">
+    <div className="min-h-screen bg-background admin-container">
       <div className="container mx-auto px-4 py-8 space-y-8 main-content">
         {/* Header */}
         <AdminPageHeader 
@@ -374,12 +374,12 @@ function AdminPageContent() {
                          handleLoadGuestJourney(result.id);
                        } else if (result.type === 'visit' && result.data) {
                          // For visit results, extract the guest ID from the data
-                         const visitData = result.data as any;
+                         const visitData = result.data as Record<string, unknown>;
                          // Check both guestId field and guest.id from the included relation
-                         const guestId = visitData.guestId || visitData.guest?.id;
+                         const guestId = visitData.guestId || (visitData.guest as Record<string, unknown>)?.id;
                          console.log('[Admin] Visit data guestId:', guestId);
                          if (guestId) {
-                           handleLoadGuestJourney(guestId);
+                           handleLoadGuestJourney(guestId as string);
                          }
                        }
                      }}>

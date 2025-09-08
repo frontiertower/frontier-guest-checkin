@@ -59,24 +59,24 @@ export function QRCodeComponent({
   if (isLoading) {
     return (
       <div className={`flex items-center justify-center ${className}`}>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className={`flex flex-col items-center justify-center p-4 bg-red-50 border border-red-200 rounded-lg ${className}`}>
-        <div className="text-red-500 text-4xl mb-2">❌</div>
-        <p className="text-sm text-red-600 text-center">{error}</p>
+      <div className={`flex flex-col items-center justify-center p-4 bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 rounded-lg ${className}`}>
+        <div className="text-destructive text-4xl mb-2">❌</div>
+        <p className="text-sm text-destructive text-center">{error}</p>
       </div>
     );
   }
 
   if (!qrDataUrl) {
     return (
-      <div className={`flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg ${className}`}>
-        <p className="text-sm text-gray-700">No QR code generated</p>
+      <div className={`flex items-center justify-center p-4 bg-muted dark:bg-surface-2 border border-border/50 dark:border-border/30 rounded-lg ${className}`}>
+        <p className="text-sm text-muted-foreground">No QR code generated</p>
       </div>
     );
   }

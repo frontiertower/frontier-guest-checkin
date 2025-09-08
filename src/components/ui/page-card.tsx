@@ -25,18 +25,27 @@ export function PageCard({
   return (
     <Card 
       className={cn(
-        // Standard Frontier Tower card styling with explicit colors for dark mode
-        "bg-card text-card-foreground border border-border rounded-lg shadow-lg",
-        // Ensure dark mode colors are applied correctly
-        "dark:bg-card dark:text-card-foreground dark:border-border",
-        // Optional gradient for special cards (like invites page)
-        gradient && "bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 border-primary/20",
+        // Base card styling with proper elevation
+        "text-card-foreground border border-border/50 rounded-xl overflow-hidden",
+        // Light mode: enhanced shadows and subtle gradient
+        "bg-card shadow-lg",
+        // Dark mode: elevated surface with architectural depth
+        "dark:shadow-none dark:border-border/30",
+        // Subtle backdrop blur for premium feel
+        "backdrop-blur-sm",
+        // Simplified solid colors - use semantic classes
+        gradient 
+          ? // Special styling for hero cards  
+            "bg-primary/5 dark:bg-muted border-primary/20 dark:border-primary/30"
+          : // Standard card styling
+            "bg-card",
         className
       )}
     >
       <CardHeader className={cn(headerClassName)}>
         <CardTitle className={cn(
-          "flex items-center gap-2 text-2xl font-bold text-foreground dark:text-foreground"
+          "flex items-center gap-2 text-2xl font-bold",
+          "text-foreground dark:text-foreground"
         )}>
           {Icon && <Icon className="h-6 w-6 text-primary" />}
           {title}

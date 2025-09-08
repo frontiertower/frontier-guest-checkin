@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     // Validate override if provided
     let isOverrideValid = false;
-    let overrideUser: any = null;
+    let overrideUser: { id: string; role: string } | null = null;
     if (override) {
       const overrideValidation = validateOverrideRequest(override);
       if (!overrideValidation.isValid) {
@@ -431,8 +431,7 @@ async function processGuestCheckIn({
         checkedInAt: now,
         expiresAt,
         overrideReason: override?.reason || null,
-        overriddenBy: overrideUserId || null,
-        overriddenAt: override ? now : null,
+        overrideBy: overrideUserId || null,
       },
     });
 

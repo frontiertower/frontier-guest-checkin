@@ -142,10 +142,14 @@ export default function GuestRegistrationPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <PageHeader 
-          title="Loading..."
-          description="Please wait while we load your invitation"
-        />
+        <div className="bg-surface-1 dark:bg-surface-1 border-b border-border-subtle dark:border-border-subtle shadow-sm dark:shadow-none">
+          <div className="container mx-auto px-4 py-6">
+            <PageHeader 
+              title="Loading..."
+              subtitle="Please wait while we load your invitation"
+            />
+          </div>
+        </div>
       </div>
     );
   }
@@ -153,20 +157,28 @@ export default function GuestRegistrationPage() {
   if (!invitation) {
     return (
       <div className="min-h-screen bg-background">
-        <PageHeader 
-          title="Invalid Invitation"
-          description="This invitation could not be found"
-        />
+        <div className="bg-surface-1 dark:bg-surface-1 border-b border-border-subtle dark:border-border-subtle shadow-sm dark:shadow-none">
+          <div className="container mx-auto px-4 py-6">
+            <PageHeader 
+              title="Invalid Invitation"
+              subtitle="This invitation could not be found"
+            />
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader 
-        title="Complete Your Profile"
-        description={`Welcome! You&apos;ve been invited by ${invitation.host.name} to visit Frontier Tower.`}
-      />
+      <div className="bg-surface-1 dark:bg-surface-1 border-b border-border-subtle dark:border-border-subtle shadow-sm dark:shadow-none">
+        <div className="container mx-auto px-4 py-6">
+          <PageHeader 
+            title="Complete Your Profile"
+            subtitle={`Welcome! You've been invited by ${invitation.host.name} to visit Frontier Tower.`}
+          />
+        </div>
+      </div>
 
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="mb-6 p-4 bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 dark:border-blue-500/30 rounded-lg">

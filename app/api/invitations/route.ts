@@ -75,7 +75,8 @@ export async function POST(request: NextRequest) {
       },
       create: {
         email,
-        // All other fields are nullable and will be filled by the guest
+        name: '', // Empty string as placeholder - guest fills this later
+        // Other nullable fields omitted - guest fills these later via profile completion
         profileCompleted: false,
       },
     });

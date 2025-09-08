@@ -20,36 +20,37 @@ export class TestDataFactory {
   }
 
   static generateId(): string {
-    return `test-${++this.idCounter}-${Math.random().toString(36).substr(2, 8)}`;
+    // Generate a proper UUID v4 for database compatibility
+    return crypto.randomUUID();
   }
 
   // Core entity builders
   static createUser(overrides: Partial<any> = {}) {
     const id = this.generateId();
+    const uniqueId = ++this.idCounter; // Increment counter for unique emails
     return {
       id,
-      email: `user${this.idCounter}@example.com`.toLowerCase(),
-      name: `Test User ${this.idCounter}`,
+      email: `user-${uniqueId}-${Date.now()}@example.com`.toLowerCase(),
+      name: `Test User ${uniqueId}`,
       role: 'host' as UserRole,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      // Remove createdAt - schema uses @default(now())
       ...overrides,
     };
   }
 
   static createGuest(overrides: Partial<any> = {}) {
     const id = this.generateId();
+    const uniqueId = ++this.idCounter; // Increment counter for unique emails
     return {
       id,
-      email: `guest${this.idCounter}@example.com`.toLowerCase(),
-      name: `Test Guest ${this.idCounter}`,
-      phone: `+1-555-${this.idCounter.toString().padStart(4, '0')}`,
+      email: `guest-${uniqueId}-${Date.now()}@example.com`.toLowerCase(),
+      name: `Test Guest ${uniqueId}`,
+      phone: `+1-555-${uniqueId.toString().padStart(4, '0')}`,
       country: 'US',
       contactMethod: 'EMAIL' as ContactMethod,
       termsAcceptedAt: new Date(),
       blacklistedAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      // Remove createdAt and updatedAt - schema uses @default(now())
       ...overrides,
     };
   }
@@ -68,6 +69,20 @@ export class TestDataFactory {
     });
   }
 
+  static createMinimalGuest(overrides: Partial<any> = {}) {
+    const id = this.generateId();
+    const uniqueId = ++this.idCounter;
+    // For Prisma, omit nullable fields rather than setting to null
+    // Only include required fields and non-null defaults
+    return {
+      id,
+      email: `minimal-${uniqueId}-${Date.now()}@example.com`.toLowerCase(),
+      profileCompleted: false,
+      // Don't include nullable fields - let Prisma handle them
+      ...overrides,
+    };
+  }
+
   static createLocation(overrides: Partial<any> = {}) {
     const id = this.generateId();
     return {
@@ -81,8 +96,7 @@ export class TestDataFactory {
         maxDailyVisits: 500,
         requiresEscort: false,
       },
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      // Remove createdAt and updatedAt - schema uses @default(now())
       ...overrides,
     };
   }
@@ -90,18 +104,9 @@ export class TestDataFactory {
   static createPolicy(overrides: Partial<any> = {}) {
     return {
       // Don't include ID - let database handle it with @default(1)
-      locationId: null, // Global policy
-      name: 'Default Test Policy',
+      // locationId field doesn't exist in current Policy schema
       guestMonthlyLimit: 3,
       hostConcurrentLimit: 3,
-      isActive: true,
-      settings: {
-        autoApproveReturningGuests: true,
-        requirePhotoId: false,
-        allowWalkIns: false,
-      },
-      createdAt: new Date(),
-      updatedAt: new Date(),
       ...overrides,
     };
   }
@@ -120,32 +125,27 @@ export class TestDataFactory {
       expiresAt,
       checkedOutAt: null,
       overrideReason: null,
-      overrideUserId: null,
-      createdAt: checkedInAt,
-      updatedAt: checkedInAt,
+      overrideBy: null, // Fixed: was overrideUserId
+      // Remove createdAt - schema uses @default(now())
       ...overrides,
     };
   }
 
-  static createInvitation(guestEmail: string, hostId: string, overrides: Partial<any> = {}) {
-    const createdAt = new Date();
-    const expiresAt = new Date(createdAt.getTime() + 24 * 60 * 60 * 1000); // 24 hours later
+  static createInvitation(guestId: string, hostId: string, locationId: string, overrides: Partial<any> = {}) {
     const id = this.generateId();
+    const inviteDate = new Date();
 
     return {
       id,
-      guestEmail: guestEmail.toLowerCase(),
-      guestName: `Test Guest ${this.idCounter}`,
+      guestId,
       hostId,
-      locationId: this.defaultLocationId,
+      locationId,
       status: 'PENDING' as InvitationStatus,
+      inviteDate,
       qrToken: Math.random().toString(36).substr(2, 32),
-      expiresAt,
-      sentAt: createdAt,
-      activatedAt: null,
-      usedAt: null,
-      createdAt,
-      updatedAt: createdAt,
+      qrIssuedAt: new Date(),
+      qrExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours later
+      // Remove createdAt and updatedAt - schema uses @default(now()) and @updatedAt
       ...overrides,
     };
   }
@@ -155,11 +155,13 @@ export class TestDataFactory {
     return {
       id,
       guestId,
+      visitId: null, // Optional
+      invitationId: null, // Optional
       termsVersion: '1.0',
-      ipAddress: '192.168.1.100',
-      userAgent: 'Mozilla/5.0 Test Browser',
-      acceptedAt: new Date(),
-      createdAt: new Date(),
+      visitorAgreementVersion: '1.0', // Required field
+      // Remove acceptedAt - schema uses @default(now())
+      expiresAt: null, // Optional
+      // Remove ipAddress and userAgent - not in schema
       ...overrides,
     };
   }

@@ -118,7 +118,7 @@ export default function ActivityTab({ isActive = false }: ActivityTabProps) {
               <Activity className="h-5 w-5" />
               Live Activity Feed
             </CardTitle>
-            <CardDescription>Recent system events and activities</CardDescription>
+            <CardDescription>Recent guest activity</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="flex items-center gap-1">

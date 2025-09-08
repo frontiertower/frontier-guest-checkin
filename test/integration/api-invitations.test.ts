@@ -40,16 +40,12 @@ async function runTests() {
   console.log('🧪 Running API integration tests for invitations endpoint...');
 
   try {
-    // Test 1: Successful invitation creation
-    console.log('📝 Test 1: Successful invitation creation');
+    // Test 1: Successful invitation creation (email-only flow)
+    console.log('📝 Test 1: Successful invitation creation (email-only flow)');
     const token = await getAuthToken('demo.host@frontier.dev', 'test123');
     
     const invitationBody = {
-      name: 'Test Guest',
       email: 'integration-test@example.com',
-      country: 'US',
-      contactMethod: 'email',
-      contactValue: 'integration-test@example.com',
       inviteDate: '2025-08-30'
     };
     
@@ -76,11 +72,11 @@ async function runTests() {
     assert.strictEqual(noAuthData.error, 'Authentication required', 'Should require auth');
     console.log('✅ Authentication required test passed');
 
-    // Test 3: Missing required fields
-    console.log('📝 Test 3: Missing required fields validation');
+    // Test 3: Missing required email field
+    console.log('📝 Test 3: Missing required email field validation');
     const incompleteBody = {
-      name: 'Test Guest',
-      // missing email, country, contactMethod, contactValue
+      inviteDate: '2025-08-30'
+      // missing email - the only required field
     };
     
     const incompleteReq = mockRequest(incompleteBody, { 
@@ -91,53 +87,48 @@ async function runTests() {
     assert.strictEqual(incompleteRes.status, 400, 'Should return 400 Bad Request');
     
     const incompleteData = await incompleteRes.json();
-    assert.strictEqual(incompleteData.error, 'Missing required fields', 'Should validate required fields');
-    console.log('✅ Missing required fields test passed');
+    assert.strictEqual(incompleteData.error, 'Email is required', 'Should validate email is required');
+    console.log('✅ Missing email validation test passed');
 
-    // Test 4: Invalid contact method enum
-    console.log('📝 Test 4: Invalid contact method enum');
-    const invalidContactBody = {
-      name: 'Test Guest',
-      email: 'invalid-contact@example.com',
-      country: 'US',
-      contactMethod: 'invalid-method', // This should fail
-      contactValue: 'invalid-contact@example.com',
-      inviteDate: '2025-08-30'
+    // Test 4: Minimal guest creation with email only
+    console.log('📝 Test 4: Minimal guest creation with email only');
+    const minimalBody = {
+      email: 'minimal-guest@example.com'
+      // No other fields - testing true minimal invitation
     };
     
-    const invalidContactReq = mockRequest(invalidContactBody, { 
+    const minimalReq = mockRequest(minimalBody, { 
       authorization: `Bearer ${token}`
     });
     
-    const invalidContactRes = await invitationsPOST(invalidContactReq);
-    // This should still work because we map to uppercase, but let's test valid enum values
-    console.log('✅ Invalid contact method test passed (mapped to uppercase)');
-
-    // Test 5: Valid contact method variations
-    console.log('📝 Test 5: Valid contact method variations');
-    const contactMethods = ['email', 'telegram', 'phone'];
+    const minimalRes = await invitationsPOST(minimalReq);
+    assert.strictEqual(minimalRes.status, 200, 'Should accept minimal invitation with just email');
     
-    for (const method of contactMethods) {
-      const methodBody = {
-        name: `Test Guest ${method}`,
-        email: `test-${method}@example.com`,
-        country: 'US',
-        contactMethod: method,
-        contactValue: method === 'email' ? `test-${method}@example.com` : `+1234567890`,
-        inviteDate: '2025-08-30'
-      };
-      
-      const methodReq = mockRequest(methodBody, { 
-        authorization: `Bearer ${token}`
-      });
-      
-      const methodRes = await invitationsPOST(methodReq);
-      assert.strictEqual(methodRes.status, 200, `Should accept ${method} contact method`);
-      
-      const methodData = await methodRes.json();
-      assert.strictEqual(methodData.invitation.guest.contactMethod, method.toUpperCase(), `Should store ${method} as uppercase enum`);
-    }
-    console.log('✅ Valid contact method variations test passed');
+    const minimalData = await minimalRes.json();
+    assert.strictEqual(minimalData.invitation.guest.email, 'minimal-guest@example.com', 'Should create guest with email');
+    // Empty string as placeholder until guest completes profile
+    assert.strictEqual(minimalData.invitation.guest.name, '', 'Guest name should be empty string initially');
+    assert.strictEqual(minimalData.invitation.guest.profileCompleted, false, 'Profile should not be completed');
+    console.log('✅ Minimal guest creation test passed');
+
+    // Test 5: Guest profile completion flow (existing guest)
+    console.log('📝 Test 5: Guest profile completion flow (existing guest)');
+    // Test that re-inviting an existing guest doesn't overwrite their profile
+    const existingGuestBody = {
+      email: 'integration-test@example.com', // Same email as Test 1
+      inviteDate: '2025-08-31' // Different date
+    };
+    
+    const existingGuestReq = mockRequest(existingGuestBody, { 
+      authorization: `Bearer ${token}`
+    });
+    
+    const existingGuestRes = await invitationsPOST(existingGuestReq);
+    assert.strictEqual(existingGuestRes.status, 200, 'Should allow re-inviting existing guest');
+    
+    const existingGuestData = await existingGuestRes.json();
+    assert.strictEqual(existingGuestData.invitation.guest.email, 'integration-test@example.com', 'Should use existing guest');
+    console.log('✅ Guest profile completion flow test passed');
 
     // Test 6: Foreign key constraint protection
     console.log('📝 Test 6: Foreign key constraint protection');

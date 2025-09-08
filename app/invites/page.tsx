@@ -233,39 +233,70 @@ export default function InvitesPage() {
           />
         )}
 
-        {/* Create Invitation Form - Renders immediately at top for primary action */}
-        <CreateInvitationForm onInvitationCreated={handleInvitationCreated} />
-
-        {/* Host QR Code Section - show skeleton while loading */}
+        {/* Host QR Code Section - Always show at top when guests are ready, show skeleton while loading */}
         {loadingStates.hostQR ? (
           <HostQRSkeleton />
         ) : (
           hostQRData && (
-            <PageCard
-              title="Your Check-in QR Code"
-              description={`${invitations.filter(inv => inv.guest.termsAcceptedAt && inv.status !== 'EXPIRED').length} guest(s) available for check-in`}
-              icon={QrCode}
-              gradient={true}
-            >
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-foreground">
-                  <p className="mb-2">This QR code contains all guests who have accepted the terms.</p>
-                  <p className="text-xs text-muted-foreground">Show this at the kiosk to check in your guests.</p>
+            <div className="animate-pulse-border">
+              <PageCard
+                title="Your Check-in QR Code"
+                description={`${invitations.filter(inv => inv.guest.termsAcceptedAt && inv.status !== 'EXPIRED').length} guest(s) ready to check in!`}
+                icon={QrCode}
+                gradient={true}
+              >
+                <div className="space-y-6">
+                  {/* Ready guests list with better hierarchy */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                        Ready for check-in:
+                      </span>
+                    </div>
+                    <div className="grid gap-2">
+                      {invitations.filter(inv => inv.guest.termsAcceptedAt && inv.status !== 'EXPIRED').map(inv => (
+                        <div key={inv.id} className="bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 dark:border-green-500/30 rounded-lg px-4 py-3">
+                          <div className="text-base font-semibold text-green-800 dark:text-green-300">
+                            {inv.guest.name || 'Guest'}
+                          </div>
+                          <div className="text-sm text-green-600 dark:text-green-400 mt-1">
+                            {inv.guest.email}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Engaging CTA button */}
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setQrModalData({ 
+                        isOpen: true, 
+                        hostQR: hostQRData
+                      })}
+                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-md transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-green-500/50 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-center gap-3">
+                        <QrCode className="h-6 w-6" />
+                        <div className="text-center">
+                          <div className="text-lg font-bold">Show QR Code</div>
+                          <div className="text-sm opacity-90">Check in your guests</div>
+                        </div>
+                      </div>
+                    </button>
+                    <p className="text-xs text-center text-muted-foreground">
+                      Present this QR code at the kiosk to check in all ready guests
+                    </p>
+                  </div>
                 </div>
-                <Button
-                  onClick={() => setQrModalData({ 
-                    isOpen: true, 
-                    hostQR: hostQRData
-                  })}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <QrCode className="h-4 w-4 mr-2" />
-                  Show QR Code
-                </Button>
-              </div>
-            </PageCard>
+              </PageCard>
+            </div>
           )
         )}
+
+        {/* Create Invitation Form - Comes after QR code if it exists */}
+        <CreateInvitationForm onInvitationCreated={handleInvitationCreated} />
 
         {/* Today's Invitations - Independent component with own loading */}
         <InvitationsGrid selectedDate={selectedDate} refreshTrigger={refreshTrigger} />

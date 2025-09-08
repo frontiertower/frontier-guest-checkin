@@ -195,7 +195,7 @@ describe('Override System Integration Tests', () => {
         });
 
         expect(visit?.overrideReason).toBe('Emergency visitor approved by security');
-        expect(visit?.overriddenBy).toBeTruthy();
+        expect(visit?.overrideBy).toBeTruthy();
       } else {
         console.log('❌ Override failed:', result.message);
         // This might fail if the API doesn't support override in demo mode
@@ -498,12 +498,13 @@ describe('Override System Integration Tests', () => {
         });
 
         expect(visit?.overrideReason).toBe(overrideReason);
-        expect(visit?.overriddenBy).toBeTruthy();
-        expect(visit?.overriddenAt).toBeTruthy();
+        expect(visit?.overrideBy).toBeTruthy();
+        // Note: overriddenAt field doesn't exist in schema, removed this check
 
         // Verify timestamp is recent
-        if (visit?.overriddenAt) {
-          const timeDiff = Date.now() - visit.overriddenAt.getTime();
+        // Check override was recent (using createdAt as proxy since overriddenAt doesn't exist)
+        if (visit?.createdAt) {
+          const timeDiff = Date.now() - visit.createdAt.getTime();
           expect(timeDiff).toBeLessThan(60000); // Within 1 minute
         }
       }
@@ -511,17 +512,17 @@ describe('Override System Integration Tests', () => {
 
     it('should track which user performed override', async () => {
       // This test would require authentication context
-      // In production, the overriddenBy field should contain the security/admin user ID
+      // In production, the overrideBy field should contain the security/admin user ID
       const visit = await prisma.visit.findFirst({
         where: {
           overrideReason: { not: null },
         },
-        orderBy: { overriddenAt: 'desc' },
+        orderBy: { createdAt: 'desc' },
       });
 
       if (visit) {
         expect(visit.overriddenBy).toBeTruthy();
-        // In production: expect(visit.overriddenBy).toBe(securityUserId);
+        // In production: expect(visit.overrideBy).toBe(securityUserId);
       }
     });
   });

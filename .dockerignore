@@ -1,3 +1,5 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
 # dependencies
 /node_modules
 /.pnp
@@ -62,6 +64,12 @@ Thumbs.db
 /playwright-report/
 /.playwright-mcp/
 
-# Dynamically generated test files (timestamped)
-multi-checkin-[0-9]*.json
-*-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.json
+# Git
+.git/
+.gitignore
+
+# Fly
+fly.toml
+
+# Documentation
+*.md
