@@ -83,8 +83,8 @@ export function InvitationsGrid({ selectedDate, refreshTrigger }: InvitationsGri
     if (invitation.status === 'CHECKED_IN') {
       return {
         badge: (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/10 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/20 dark:border-green-500/30">
-            <CheckCircle2 className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-success/20 to-success/10 text-success border border-success/30 shadow-sm shadow-success/10">
+            <CheckCircle2 className="h-4 w-4 mr-2" />
             Checked In
           </span>
         ),
@@ -95,14 +95,14 @@ export function InvitationsGrid({ selectedDate, refreshTrigger }: InvitationsGri
     if (invitation.status === 'EXPIRED') {
       return {
         badge: (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-500/10 dark:bg-red-500/20 text-red-700 dark:text-red-400 border border-red-500/20 dark:border-red-500/30">
-            <XCircle className="h-4 w-4 mr-2 text-red-600 dark:text-red-400" />
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-destructive/20 to-destructive/10 text-destructive border border-destructive/30 shadow-sm shadow-destructive/10">
+            <XCircle className="h-4 w-4 mr-2" />
             Expired
           </span>
         ),
         action: (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30">
-            <RotateCcw className="h-3 w-3 mr-2" />
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-info/10 text-info border border-info/20 shadow-sm">
+            <RotateCcw className="h-3 w-3 mr-1.5" />
             Generate New QR
           </span>
         )
@@ -113,8 +113,8 @@ export function InvitationsGrid({ selectedDate, refreshTrigger }: InvitationsGri
     if (!hasProfileCompleted) {
       return {
         badge: (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30">
-            <AlertCircle className="h-4 w-4 mr-2 text-amber-600 dark:text-amber-400" />
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-warning/20 to-warning/10 text-warning border border-warning/30 shadow-sm shadow-warning/10">
+            <AlertCircle className="h-4 w-4 mr-2" />
             Awaiting Profile
           </span>
         ),
@@ -125,14 +125,14 @@ export function InvitationsGrid({ selectedDate, refreshTrigger }: InvitationsGri
     if (hasTerms) {
       return {
         badge: (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-500/15 dark:bg-green-500/25 text-green-700 dark:text-green-400 border border-green-500/25 dark:border-green-500/35 shadow-sm">
-            <UserCheck className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-gradient-to-r from-success/25 to-success/15 text-success border border-success/35 shadow-md shadow-success/15 animate-pulse">
+            <UserCheck className="h-4 w-4 mr-2" />
             Ready for Check-in
           </span>
         ),
         action: (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/20 dark:border-green-500/30">
-            <UserCheck className="h-3 w-3 mr-2" />
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-success/10 text-success border border-success/20 shadow-sm">
+            <UserCheck className="h-3 w-3 mr-1.5" />
             On Your QR Code
           </span>
         )
@@ -141,8 +141,8 @@ export function InvitationsGrid({ selectedDate, refreshTrigger }: InvitationsGri
     
     return {
       badge: (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30">
-          <Clock className="h-4 w-4 mr-2 text-amber-600 dark:text-amber-400" />
+        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-warning/20 to-warning/10 text-warning border border-warning/30 shadow-sm shadow-warning/10">
+          <Clock className="h-4 w-4 mr-2" />
           Awaiting Terms
         </span>
       ),
@@ -164,10 +164,13 @@ export function InvitationsGrid({ selectedDate, refreshTrigger }: InvitationsGri
         <InvitationGridSkeleton count={6} />
       ) : invitations.length === 0 ? (
         <div className="text-center py-12">
-          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-            <Calendar className="h-8 w-8 text-muted-foreground" />
+          <div className="relative inline-flex">
+            <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-xl opacity-50" />
+            <div className="relative w-20 h-20 bg-gradient-to-br from-muted to-muted-foreground/20 rounded-full flex items-center justify-center shadow-inner">
+              <Calendar className="h-10 w-10 text-muted-foreground" />
+            </div>
           </div>
-          <p className="text-lg font-medium text-foreground mb-2">No invitations for this date</p>
+          <p className="text-lg font-semibold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent mt-4 mb-2">No invitations for this date</p>
           <p className="text-muted-foreground">Create your first invitation above to get started.</p>
         </div>
       ) : (
@@ -180,23 +183,28 @@ export function InvitationsGrid({ selectedDate, refreshTrigger }: InvitationsGri
               <div 
                 key={invitation.id} 
                 className={`
-                  bg-card border rounded-lg shadow-sm transition-all p-3
+                  relative border rounded-xl transition-all duration-300 p-4 group
                   ${isReady && !isCheckedIn
-                    ? 'border-green-500/30 shadow-green-500/10 shadow-lg hover:shadow-green-500/20 hover:scale-[1.03] ring-1 ring-green-500/20'
-                    : 'border-border hover:shadow-md hover:scale-[1.02]'
+                    ? 'bg-gradient-to-br from-success/15 to-success/5 border-success/35 shadow-lg shadow-success/15 hover:shadow-xl hover:shadow-success/20 hover:scale-[1.03] ring-2 ring-success/25'
+                    : isCheckedIn
+                    ? 'bg-gradient-to-br from-surface-1/50 to-surface-2/30 border-border/30 hover:shadow-lg hover:scale-[1.02] opacity-90'
+                    : 'bg-gradient-to-br from-card to-surface-1/50 border-border/50 hover:border-primary/20 hover:shadow-lg hover:scale-[1.02]'
                   }
                 `}
               >
-                <div className="mb-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-base font-semibold text-foreground truncate">
+                {isReady && !isCheckedIn && (
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-success/30 to-success/10 rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity" />
+                )}
+                <div className="relative mb-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-base font-bold text-foreground truncate">
                       {invitation.guest.name || 'Pending Registration'}
                     </h3>
                     {isReady && !isCheckedIn && (
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse flex-shrink-0"></div>
+                      <div className="w-2.5 h-2.5 bg-success rounded-full animate-pulse flex-shrink-0 shadow-sm shadow-success"></div>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2 truncate">{invitation.guest.email}</p>
+                  <p className="text-sm text-muted-foreground mb-3 truncate">{invitation.guest.email}</p>
                   
                   <div className="space-y-2">
                     {getPrimaryStatus(invitation).badge}
@@ -207,8 +215,9 @@ export function InvitationsGrid({ selectedDate, refreshTrigger }: InvitationsGri
                 </div>
                 
                 {invitation.qrExpiresAt && invitation.status === 'ACTIVATED' && (
-                  <div className="text-xs text-muted-foreground border-t border-border pt-2 mt-2">
-                    Expires {formatCountdown(new Date(invitation.qrExpiresAt))}
+                  <div className="text-xs text-muted-foreground border-t border-border/30 pt-2 mt-2 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span>Expires {formatCountdown(new Date(invitation.qrExpiresAt))}</span>
                   </div>
                 )}
               </div>

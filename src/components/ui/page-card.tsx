@@ -25,33 +25,40 @@ export function PageCard({
   return (
     <Card 
       className={cn(
-        // Base card styling with proper elevation
-        "text-card-foreground border border-border/50 rounded-xl overflow-hidden",
-        // Light mode: enhanced shadows and subtle gradient
-        "bg-card shadow-lg",
-        // Dark mode: elevated surface with architectural depth
-        "dark:shadow-none dark:border-border/30",
-        // Subtle backdrop blur for premium feel
-        "backdrop-blur-sm",
-        // Simplified solid colors - use semantic classes
+        // Base card styling with enhanced elevation
+        "text-card-foreground border rounded-xl overflow-hidden transition-all duration-300",
+        // Enhanced shadows and depth
+        "shadow-xl hover:shadow-2xl",
+        // Base background with gradient option
         gradient 
-          ? // Special styling for hero cards  
-            "bg-primary/5 dark:bg-muted border-primary/20 dark:border-primary/30"
-          : // Standard card styling
-            "bg-card",
+          ? // Hero cards with special emphasis
+            "bg-gradient-to-br from-primary/10 to-card border-primary/30 shadow-primary/10"
+          : // Standard cards with subtle gradient
+            "bg-gradient-to-br from-card to-surface-1/50 border-border/50 hover:border-primary/20",
+        // Backdrop effects
+        "backdrop-blur-sm",
+        // Hover effects
+        "hover:scale-[1.01]",
         className
       )}
     >
-      <CardHeader className={cn(headerClassName)}>
+      <CardHeader className={cn(
+        "border-b border-border/30 bg-surface-0/30",
+        headerClassName
+      )}>
         <CardTitle className={cn(
-          "flex items-center gap-2 text-2xl font-bold",
-          "text-foreground dark:text-foreground"
+          "flex items-center gap-3 text-2xl font-bold",
+          "bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent"
         )}>
-          {Icon && <Icon className="h-6 w-6 text-primary" />}
+          {Icon && (
+            <div className="p-2 rounded-lg bg-primary/10 backdrop-blur-sm">
+              <Icon className="h-5 w-5 text-primary" />
+            </div>
+          )}
           {title}
         </CardTitle>
         {description && (
-          <CardDescription className="text-muted-foreground dark:text-muted-foreground">
+          <CardDescription className="text-muted-foreground mt-1">
             {description}
           </CardDescription>
         )}

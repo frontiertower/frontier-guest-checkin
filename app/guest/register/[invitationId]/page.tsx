@@ -141,13 +141,27 @@ export default function GuestRegistrationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="bg-surface-1 dark:bg-surface-1 border-b border-border-subtle dark:border-border-subtle shadow-sm dark:shadow-none">
+      <div className="min-h-screen bg-gradient-to-br from-background via-surface-0 to-background relative overflow-hidden">
+        {/* Subtle animated gradient orbs */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-48 -right-48 w-96 h-96 bg-primary/3 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-primary/3 rounded-full blur-3xl animate-pulse delay-700" />
+        </div>
+        
+        <div className="bg-surface-1/50 backdrop-blur-sm border-b border-border/30 shadow-sm">
           <div className="container mx-auto px-4 py-6">
             <PageHeader 
               title="Loading..."
               subtitle="Please wait while we load your invitation"
             />
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-pulse flex items-center gap-3">
+            <div className="w-3 h-3 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-3 h-3 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-3 h-3 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
         </div>
       </div>
@@ -156,8 +170,14 @@ export default function GuestRegistrationPage() {
 
   if (!invitation) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="bg-surface-1 dark:bg-surface-1 border-b border-border-subtle dark:border-border-subtle shadow-sm dark:shadow-none">
+      <div className="min-h-screen bg-gradient-to-br from-background via-surface-0 to-background relative overflow-hidden">
+        {/* Subtle animated gradient orbs */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-48 -right-48 w-96 h-96 bg-destructive/3 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-destructive/3 rounded-full blur-3xl animate-pulse delay-700" />
+        </div>
+        
+        <div className="bg-surface-1/50 backdrop-blur-sm border-b border-border/30 shadow-sm">
           <div className="container mx-auto px-4 py-6">
             <PageHeader 
               title="Invalid Invitation"
@@ -170,8 +190,14 @@ export default function GuestRegistrationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-surface-1 dark:bg-surface-1 border-b border-border-subtle dark:border-border-subtle shadow-sm dark:shadow-none">
+    <div className="min-h-screen bg-gradient-to-br from-background via-surface-0 to-background relative overflow-hidden">
+      {/* Subtle animated gradient orbs */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-48 -right-48 w-96 h-96 bg-primary/3 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-primary/3 rounded-full blur-3xl animate-pulse delay-700" />
+      </div>
+      
+      <div className="bg-surface-1/50 backdrop-blur-sm border-b border-border/30 shadow-sm relative z-10">
         <div className="container mx-auto px-4 py-6">
           <PageHeader 
             title="Complete Your Profile"
@@ -180,13 +206,18 @@ export default function GuestRegistrationPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="mb-6 p-4 bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 dark:border-blue-500/30 rounded-lg">
-          <div className="flex items-start space-x-2">
-            <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-            <div className="text-sm text-blue-700 dark:text-blue-400">
-              <p className="font-semibold">Step 1 of 2: Complete Your Profile</p>
-              <p>Please provide your information below. After completing this form, you&apos;ll be asked to accept our terms and conditions.</p>
+      <div className="container mx-auto px-4 py-8 max-w-2xl relative z-10">
+        <div className="mb-6 relative group">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-info/10 to-transparent rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity" />
+          <div className="relative p-5 bg-gradient-to-r from-info/10 to-info/5 border border-info/20 rounded-xl shadow-sm backdrop-blur-sm">
+            <div className="flex items-start space-x-3">
+              <div className="p-2 rounded-lg bg-info/10">
+                <AlertCircle className="w-5 h-5 text-info" />
+              </div>
+              <div className="text-sm">
+                <p className="font-semibold text-info mb-1">Step 1 of 2: Complete Your Profile</p>
+                <p className="text-muted-foreground">Please provide your information below. After completing this form, you&apos;ll be asked to accept our terms and conditions.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -195,10 +226,12 @@ export default function GuestRegistrationPage() {
           title="Your Information"
           description={`Email: ${invitation.guest.email}`}
           icon={UserCheck}
+          className="shadow-xl border-border/30 hover:border-primary/20 transition-all duration-300"
         >
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium text-foreground">
+              <Label htmlFor="name" className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <span className="text-base opacity-80">👤</span>
                 Full Name *
               </Label>
               <Input
@@ -207,11 +240,13 @@ export default function GuestRegistrationPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Enter your full name"
                 required
+                className="bg-surface-0/50 border-border/50 hover:bg-surface-1/50 hover:border-primary/30 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-surface-1/50 transition-all"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="country" className="text-sm font-medium text-foreground">
+              <Label htmlFor="country" className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <span className="text-base opacity-80">🌍</span>
                 Country *
               </Label>
               <Input
@@ -220,11 +255,13 @@ export default function GuestRegistrationPage() {
                 onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                 placeholder="Enter your country"
                 required
+                className="bg-surface-0/50 border-border/50 hover:bg-surface-1/50 hover:border-primary/30 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-surface-1/50 transition-all"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">
+              <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <span className="text-base opacity-80">📞</span>
                 Contact Method *
               </Label>
               <div className="flex gap-2">
@@ -234,10 +271,10 @@ export default function GuestRegistrationPage() {
                     setFormData({ ...formData, contactMethod: value })
                   }
                 >
-                  <SelectTrigger className="w-32 border border-border rounded-lg">
+                  <SelectTrigger className="w-32 bg-surface-0/50 border-border/50 hover:bg-surface-1/50 hover:border-primary/30 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-card border-border/50">
                     <SelectItem value="TELEGRAM">Telegram</SelectItem>
                     <SelectItem value="PHONE">Phone</SelectItem>
                   </SelectContent>
@@ -247,17 +284,23 @@ export default function GuestRegistrationPage() {
                   value={formData.contactValue}
                   onChange={(e) => setFormData({ ...formData, contactValue: e.target.value })}
                   required
+                  className="bg-surface-0/50 border-border/50 hover:bg-surface-1/50 hover:border-primary/30 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-surface-1/50 transition-all"
                 />
               </div>
             </div>
 
-            <div className="pt-4 border-t">
-              <Button 
-                type="submit" 
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-3 rounded-lg font-medium text-sm transition-colors"
+            <div className="pt-6 border-t border-border/30">
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary text-primary-foreground font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-primary/30 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:from-muted disabled:to-muted disabled:hover:scale-100 group"
               >
-                Continue to Terms & Conditions
-              </Button>
+                <div className="flex items-center justify-center gap-3">
+                  <span className="text-lg font-bold">Continue to Terms & Conditions</span>
+                  <div className="p-1.5 rounded-lg bg-white/10 backdrop-blur-sm group-hover:bg-white/20 transition-colors">
+                    <span className="text-lg">→</span>
+                  </div>
+                </div>
+              </button>
             </div>
           </form>
         </PageCard>

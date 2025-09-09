@@ -666,7 +666,7 @@ export default function CheckInPage() {
           </p>
           <button 
             onClick={() => window.location.reload()}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-medium"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-medium cursor-pointer"
           >
             Retry Camera Access
           </button>
@@ -676,7 +676,10 @@ export default function CheckInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted relative">
+    <div className="min-h-screen bg-background relative">
+      {/* Subtle background gradient for depth */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-20 pointer-events-none" />
+      
       {checkInState === 'idle' ? (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg px-4" style={{ marginTop: '-80px' }}>
           {/* Header positioned above the button */}
@@ -688,18 +691,20 @@ export default function CheckInPage() {
           </div>
           
           {/* Button - this is what's actually centered in viewport */}
-          <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
+          <div className="bg-gradient-to-br from-card to-surface-1/50 border border-border/50 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 p-4 sm:p-6 backdrop-blur-sm">
             <div className="text-center space-y-6">
               <div className="space-y-3">
                 <button
                   onClick={startCheckIn}
-                  className="w-full bg-primary hover:bg-primary-hover text-primary-foreground font-semibold py-6 px-8 rounded-xl shadow-lg hover:shadow-md transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
+                  className="w-full bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary text-primary-foreground font-semibold py-6 px-8 rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-primary/30 cursor-pointer group"
                 >
-                  <div className="flex items-center justify-center gap-3">
-                    <QrCode className="h-6 w-6" />
+                  <div className="flex items-center justify-center gap-4">
+                    <div className="p-3 rounded-lg bg-white/10 backdrop-blur-sm group-hover:bg-white/20 transition-colors">
+                      <QrCode className="h-7 w-7" />
+                    </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold">Check In Guests</div>
-                      <div className="text-sm opacity-90">Scan the QR code from your Invites page</div>
+                      <div className="text-xl font-bold tracking-tight">Check In Guests</div>
+                      <div className="text-sm opacity-90 mt-1">Scan the QR code from your Invites page</div>
                     </div>
                   </div>
                 </button>
@@ -723,9 +728,9 @@ export default function CheckInPage() {
 
           <div className="w-full max-w-lg mx-auto">
             {checkInState === 'scanning' ? (
-              <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
+              <div className="bg-gradient-to-br from-card to-surface-1/50 border border-border/50 rounded-xl shadow-xl backdrop-blur-sm p-4 sm:p-6">
               <div className="mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-2">Scan Your QR Code</h2>
+                <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent mb-2">Scan Your QR Code</h2>
                 <p className="text-sm text-muted-foreground mb-4">
                   Position your check-in QR code in view
                 </p>
@@ -738,7 +743,7 @@ export default function CheckInPage() {
                     <select 
                       value={selectedCamera || ''}
                       onChange={(e) => handleCameraChange(e.target.value)}
-                      className="w-full p-2 border border-border bg-background text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                      className="w-full p-2 border border-border/50 bg-surface-0/50 text-foreground rounded-lg hover:bg-surface-1/50 hover:border-primary/30 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                       disabled={isSwitchingCamera}
                     >
                       {cameras.map((camera) => (
@@ -751,7 +756,7 @@ export default function CheckInPage() {
                 )}
               </div>
               
-              <div className="relative aspect-square bg-black rounded-lg overflow-hidden mb-4 max-w-sm mx-auto">
+              <div className="relative aspect-square bg-black rounded-xl overflow-hidden mb-4 max-w-sm mx-auto border-2 border-primary/30 shadow-lg shadow-primary/10">
                 <video
                   ref={videoRef}
                   className="w-full h-full object-cover"
@@ -759,6 +764,13 @@ export default function CheckInPage() {
                   muted
                   autoPlay
                 />
+                {/* Scanning overlay corners */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-primary rounded-tl-lg" />
+                  <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-primary rounded-tr-lg" />
+                  <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-primary rounded-bl-lg" />
+                  <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-primary rounded-br-lg" />
+                </div>
                 
                 {(!selectedCamera || isSwitchingCamera) && (
                   <div className="absolute inset-0 flex items-center justify-center text-white bg-black/50">
@@ -773,7 +785,7 @@ export default function CheckInPage() {
               <div className="flex gap-3">
                 <button
                   onClick={resetScanner}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2"
+                  className="flex-1 bg-gradient-to-r from-muted to-muted-foreground/20 hover:from-muted-foreground/20 hover:to-muted text-foreground px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all hover:shadow-md border border-border/30 cursor-pointer"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
@@ -787,22 +799,25 @@ export default function CheckInPage() {
               onCancel={resetScanner}
             />
           ) : checkInState === 'processing' ? (
-            <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
+            <div className="bg-gradient-to-br from-card to-surface-1/50 border border-border/50 rounded-xl shadow-xl backdrop-blur-sm p-4 sm:p-6">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-2">Processing Check-In</h2>
+                <div className="relative inline-flex">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30 mx-auto mb-4"></div>
+                </div>
+                <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent mb-2">Processing Check-In</h2>
                 <p className="text-sm text-muted-foreground">
                   {selectedGuest ? `Checking in ${selectedGuest.n}...` : 'Processing your check-in...'}
                 </p>
               </div>
             </div>
           ) : checkInState === 'success' ? (
-            <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
+            <div className="bg-gradient-to-br from-success/10 to-card border border-success/30 rounded-xl shadow-xl shadow-success/10 backdrop-blur-sm p-4 sm:p-6">
               <div className="text-center mb-6">
-                <div className="text-green-500 text-6xl mb-4">
-                  ✨
+                <div className="inline-flex p-4 rounded-full bg-success/20 shadow-lg shadow-success/20 mb-4">
+                  <span className="text-5xl">✨</span>
                 </div>
-                <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-2">
+                <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-success to-success-foreground bg-clip-text text-transparent mb-2">
                   {checkInResult?.reEntry ? "Welcome Back!" : "You're All Set!"}
                 </h2>
                 {checkInResult?.guest && (
@@ -811,16 +826,19 @@ export default function CheckInPage() {
                   </p>
                 )}
                 {checkInResult?.discountTriggered && (
-                  <p className="text-sm text-purple-600 font-medium mt-2">
-                    Special surprise coming to your email!
-                  </p>
+                  <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30">
+                    <span className="text-2xl animate-pulse">🎁</span>
+                    <p className="text-sm font-medium bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      Special surprise coming to your email!
+                    </p>
+                  </div>
                 )}
               </div>
 
               {checkInResult?.message && (
                 <div className="mb-6">
-                  <div className="bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 dark:border-green-500/30 p-4 rounded-lg text-center">
-                    <p className="text-sm text-green-700 dark:text-green-400 leading-relaxed">{checkInResult.message}</p>
+                  <div className="bg-success/10 border border-success/20 p-4 rounded-lg text-center shadow-sm shadow-success/10">
+                    <p className="text-sm text-success font-medium leading-relaxed">{checkInResult.message}</p>
                   </div>
                 </div>
               )}
@@ -828,23 +846,25 @@ export default function CheckInPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={resetScanner}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
+                  className="flex-1 bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary text-primary-foreground px-4 py-3 rounded-lg font-medium shadow-md hover:shadow-lg hover:shadow-primary/20 transition-all cursor-pointer"
                 >
                   Check In Another Guest
                 </button>
               </div>
             </div>
           ) : checkInState === 'error' ? (
-            <div className="bg-card border border-border rounded-lg shadow-lg p-4 sm:p-6">
+            <div className="bg-gradient-to-br from-destructive/10 to-card border border-destructive/30 rounded-xl shadow-xl shadow-destructive/10 backdrop-blur-sm p-4 sm:p-6">
               <div className="text-center mb-6">
-                <div className="text-red-500 text-6xl mb-4">{getErrorIcon(errorMessage)}</div>
-                <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-2">{getErrorTitle(errorMessage)}</h2>
+                <div className="inline-flex p-4 rounded-full bg-destructive/20 shadow-lg shadow-destructive/20 mb-4">
+                  <span className="text-5xl">{getErrorIcon(errorMessage)}</span>
+                </div>
+                <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-destructive to-destructive-foreground bg-clip-text text-transparent mb-2">{getErrorTitle(errorMessage)}</h2>
               </div>
 
               {errorMessage && (
                 <div className="mb-6">
-                  <div className="bg-red-500/10 dark:bg-red-500/20 border border-red-500/20 dark:border-red-500/30 p-4 rounded-lg">
-                    <p className="text-sm text-red-700 dark:text-red-400">{errorMessage}</p>
+                  <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg shadow-sm shadow-destructive/10">
+                    <p className="text-sm text-destructive font-medium">{errorMessage}</p>
                   </div>
                 </div>
               )}
@@ -852,7 +872,7 @@ export default function CheckInPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={resetScanner}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
+                  className="flex-1 bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary text-primary-foreground px-4 py-3 rounded-lg font-medium shadow-md hover:shadow-lg hover:shadow-primary/20 transition-all cursor-pointer"
                 >
                   Try Again
                 </button>
@@ -879,7 +899,7 @@ export default function CheckInPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={resetScanner}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg cursor-pointer"
                 >
                   Scan Another
                 </button>

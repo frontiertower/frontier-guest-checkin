@@ -210,8 +210,11 @@ export default function InvitesPage() {
   // No longer show full-page skeleton - render layout immediately with selective skeletons
 
   return (
-    <div className="min-h-screen bg-muted">
-      <div className="container mx-auto px-4 py-8 space-y-8">
+    <div className="min-h-screen bg-background relative">
+      {/* Subtle background gradient for depth */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-20 pointer-events-none" />
+      
+      <div className="container mx-auto px-4 py-8 space-y-8 relative">
         {/* Header - show skeleton while loading user data */}
         {loadingStates.user ? (
           <UserHeaderSkeleton />
@@ -221,9 +224,28 @@ export default function InvitesPage() {
             subtitle={`Welcome, ${currentUser?.name || 'Host'}`}
             actions={
               <>
-                <div className="bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 dark:border-blue-500/30 rounded-lg px-4 py-2 flex items-center gap-2">
-                  <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-400">Active Guests: {activeGuestCount}/3</span>
+                <div className="relative">
+                  <div className="bg-gradient-to-r from-info/10 to-info/5 border border-info/20 rounded-lg px-4 py-2 shadow-sm shadow-info/10">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 rounded-lg bg-info/20 backdrop-blur-sm">
+                        <Users className="h-4 w-4 text-info" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-info">Active Guests: {activeGuestCount}/3</span>
+                        {/* Visual capacity meter */}
+                        <div className="mt-1 h-1.5 bg-surface-3/50 rounded-full overflow-hidden w-24">
+                          <div 
+                            className={`h-full transition-all duration-500 rounded-full ${
+                              activeGuestCount === 0 ? 'bg-muted-foreground/30' :
+                              activeGuestCount < 3 ? 'bg-gradient-to-r from-info to-info/60' :
+                              'bg-gradient-to-r from-warning to-warning/60'
+                            }`}
+                            style={{ width: `${Math.min((activeGuestCount / 3) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Times shown in {TIMEZONE_DISPLAY}
@@ -238,30 +260,50 @@ export default function InvitesPage() {
           <HostQRSkeleton />
         ) : (
           hostQRData && (
-            <div className="animate-pulse-border">
+            <div className="relative">
+              {/* Glow effect for hero card */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-success/20 to-success/10 rounded-xl blur-xl opacity-50" />
               <PageCard
                 title="Your Check-in QR Code"
                 description={`${invitations.filter(inv => inv.guest.termsAcceptedAt && inv.status !== 'EXPIRED').length} guest(s) ready to check in!`}
                 icon={QrCode}
                 gradient={true}
+                className="relative border-success/30 shadow-xl shadow-success/10 bg-gradient-to-br from-success/10 to-card"
               >
                 <div className="space-y-6">
-                  {/* Ready guests list with better hierarchy */}
+                  {/* Ready guests list with enhanced visual hierarchy */}
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                      <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                        Ready for check-in:
-                      </span>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/20 border border-success/30">
+                        <span className="w-2 h-2 bg-success rounded-full animate-pulse shadow-sm shadow-success"></span>
+                        <span className="text-sm font-semibold text-success">
+                          Ready for check-in:
+                        </span>
+                      </div>
                     </div>
-                    <div className="grid gap-2">
-                      {invitations.filter(inv => inv.guest.termsAcceptedAt && inv.status !== 'EXPIRED').map(inv => (
-                        <div key={inv.id} className="bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 dark:border-green-500/30 rounded-lg px-4 py-3">
-                          <div className="text-base font-semibold text-green-800 dark:text-green-300">
-                            {inv.guest.name || 'Guest'}
-                          </div>
-                          <div className="text-sm text-green-600 dark:text-green-400 mt-1">
-                            {inv.guest.email}
+                    <div className="grid gap-3">
+                      {invitations.filter(inv => inv.guest.termsAcceptedAt && inv.status !== 'EXPIRED').map((inv, index) => (
+                        <div key={inv.id} className="group relative">
+                          <div className="absolute -inset-0.5 bg-gradient-to-r from-success/30 to-success/10 rounded-xl blur opacity-60 group-hover:opacity-100 transition-opacity" />
+                          <div className="relative bg-gradient-to-r from-success/15 to-success/10 border border-success/30 rounded-xl px-4 py-3 hover:shadow-lg hover:shadow-success/10 transition-all">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-success/30 to-success/20 rounded-full flex items-center justify-center shadow-md shadow-success/20">
+                                <span className="text-success font-bold text-sm">
+                                  {inv.guest.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'G'}
+                                </span>
+                              </div>
+                              <div>
+                                <div className="text-base font-semibold text-foreground">
+                                  {inv.guest.name || 'Guest'}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {inv.guest.email}
+                                </div>
+                              </div>
+                              <div className="ml-auto">
+                                <span className="text-xs text-success font-medium">✓ Ready</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -275,13 +317,15 @@ export default function InvitesPage() {
                         isOpen: true, 
                         hostQR: hostQRData
                       })}
-                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-md transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-green-500/50 cursor-pointer"
+                      className="w-full bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70 text-success-foreground font-semibold py-5 px-6 rounded-xl shadow-lg hover:shadow-xl hover:shadow-success/20 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-success/30 cursor-pointer group"
                     >
-                      <div className="flex items-center justify-center gap-3">
-                        <QrCode className="h-6 w-6" />
+                      <div className="flex items-center justify-center gap-4">
+                        <div className="p-3 rounded-lg bg-white/20 backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+                          <QrCode className="h-7 w-7" />
+                        </div>
                         <div className="text-center">
-                          <div className="text-lg font-bold">Show QR Code</div>
-                          <div className="text-sm opacity-90">Check in your guests</div>
+                          <div className="text-xl font-bold tracking-tight">Show QR Code</div>
+                          <div className="text-sm opacity-90 mt-0.5">Check in your guests at the kiosk</div>
                         </div>
                       </div>
                     </button>
@@ -304,12 +348,12 @@ export default function InvitesPage() {
         {/* Guest History - Independent component with own loading */}
         <GuestHistorySection />
 
-        {/* QR Code Modal */}
+        {/* Enhanced QR Code Modal */}
         <Dialog 
           open={qrModalData.isOpen} 
           onOpenChange={(open) => setQrModalData({ isOpen: open })}
         >
-          <DialogContent className="sm:max-w-md bg-card border border-border">
+          <DialogContent className="sm:max-w-md bg-gradient-to-br from-card to-surface-1/50 border-2 border-border/50 shadow-2xl backdrop-blur-xl">
             <DialogHeader>
               <DialogTitle className="text-foreground">
                 {qrModalData.hostQR ? 'Your Check-in QR Code' : `QR Code - ${qrModalData.invitation?.guest.name}`}
@@ -323,27 +367,32 @@ export default function InvitesPage() {
             
             {(qrModalData.invitation || qrModalData.hostQR) && (
               <div className="space-y-4">
-                <div className="p-8 bg-card border border-border rounded-lg">
-                  <div className="text-center flex flex-col items-center justify-center">
-                    {(qrModalData.hostQR || qrModalData.invitation?.qrToken) ? (
-                      <QRCodeComponent 
-                        value={qrModalData.hostQR || qrModalData.invitation?.qrToken || ''}
-                        size={256}
-                        className="mb-4"
-                        onError={(error) => {
-                          console.error('QR Code generation failed:', error);
-                          toast({ 
-                            title: 'QR Code Error', 
-                            description: 'Failed to generate QR code. Please try regenerating.' 
-                          });
-                        }}
-                      />
-                    ) : (
-                      <div className="text-center">
-                        <div className="text-6xl mb-4">❌</div>
-                        <p className="text-sm text-foreground">No QR data available</p>
-                      </div>
-                    )}
+                <div className="relative">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-xl blur-xl opacity-30" />
+                  <div className="relative p-8 bg-gradient-to-br from-surface-1/50 to-surface-2/30 border border-primary/20 rounded-xl shadow-inner">
+                    <div className="text-center flex flex-col items-center justify-center">
+                      {(qrModalData.hostQR || qrModalData.invitation?.qrToken) ? (
+                        <div className="relative">
+                          <div className="absolute -inset-2 bg-gradient-to-r from-primary/30 to-success/30 rounded-lg blur-md opacity-50" />
+                          <QRCodeComponent 
+                            value={qrModalData.hostQR || qrModalData.invitation?.qrToken || ''}
+                            size={256}
+                            className="relative mb-4 rounded-lg shadow-xl"
+                            onError={(error) => {
+                              console.error('QR Code generation failed:', error);
+                              toast({ 
+                                title: 'QR Code Error', 
+                                description: 'Failed to generate QR code. Please try regenerating.' 
+                              });
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <div className="text-6xl mb-4">❌</div>
+                          <p className="text-sm text-foreground">No QR data available</p>
+                        </div>
+                      )}
                     {!qrModalData.hostQR && (
                       <div className="mt-4 p-3 bg-muted border border-border rounded-lg">
                         <p className="text-xs font-mono text-muted-foreground break-all leading-relaxed">
@@ -351,24 +400,27 @@ export default function InvitesPage() {
                         </p>
                       </div>
                     )}
+                    </div>
                   </div>
                 </div>
                 
                 {!qrModalData.hostQR && qrModalData.countdown && (
                   qrModalData.countdown === 'EXPIRED' ? (
-                    <div className="bg-red-500/10 dark:bg-red-500/20 border border-red-500/20 dark:border-red-500/30 rounded-lg p-4">
+                    <div className="bg-gradient-to-r from-destructive/20 to-destructive/10 border border-destructive/30 rounded-lg p-4 shadow-sm shadow-destructive/10">
                       <div className="text-center">
-                        <p className="text-sm text-red-700 dark:text-red-400 mb-1">Time remaining:</p>
-                        <p className="text-2xl font-mono font-semibold text-red-600 dark:text-red-400">
+                        <p className="text-sm text-destructive font-medium mb-1">Time remaining:</p>
+                        <p className="text-2xl font-mono font-bold text-destructive flex items-center justify-center gap-2">
+                          <span className="text-xl">⏱️</span>
                           EXPIRED
                         </p>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 dark:border-green-500/30 rounded-lg p-4">
+                    <div className="bg-gradient-to-r from-success/20 to-success/10 border border-success/30 rounded-lg p-4 shadow-sm shadow-success/10">
                       <div className="text-center">
-                        <p className="text-sm text-green-700 dark:text-green-400 mb-1">Time remaining:</p>
-                        <p className="text-2xl font-mono font-semibold text-green-700 dark:text-green-400">
+                        <p className="text-sm text-success font-medium mb-1">Time remaining:</p>
+                        <p className="text-2xl font-mono font-bold text-success flex items-center justify-center gap-2">
+                          <span className="text-xl animate-pulse">⏱️</span>
                           {qrModalData.countdown || '00:00'}
                         </p>
                       </div>
@@ -384,6 +436,7 @@ export default function InvitesPage() {
                   <Button 
                     onClick={copyQRToken}
                     variant="secondary"
+                    className="cursor-pointer"
                   >
                     <Copy className="h-4 w-4 mr-1" />
                     Copy Token
@@ -391,6 +444,7 @@ export default function InvitesPage() {
                   <Button 
                     onClick={regenerateQR}
                     variant="default"
+                    className="cursor-pointer"
                   >
                     <RotateCcw className="h-4 w-4 mr-1" />
                     Regenerate
@@ -401,6 +455,7 @@ export default function InvitesPage() {
                 <Button 
                   onClick={() => setQrModalData({ isOpen: false })}
                   variant="default"
+                  className="cursor-pointer"
                 >
                   Close
                 </Button>

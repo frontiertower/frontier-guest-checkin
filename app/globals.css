@@ -109,72 +109,90 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark Mode - Balanced 3-Level Hierarchy */
-    --background: #0f0f12;        /* Darkest - true page background (lightened) */
-    --surface: #1f1f2a;          /* Medium - cards, panels (+16 RGB each component) */
-    --elevated: #2f2f3c;         /* Lightest - modals, dropdowns (+16 RGB each component) */
-    --foreground: #e8e6e3;       /* Warm off-white text */
+    /* Dark Mode - Enhanced 4-Level Visual Hierarchy */
+    --background: #0a0a0d;        /* Darkest - true page background */
+    --surface-0: #12121a;         /* Level 0 - subtle elevation */
+    --surface-1: #1a1a26;         /* Level 1 - cards, panels */
+    --surface-2: #232334;         /* Level 2 - hover states */
+    --surface-3: #2d2d42;         /* Level 3 - active states */
+    --elevated: #35354d;          /* Highest - modals, dropdowns */
+    --foreground: #f1efec;        /* Bright warm off-white text */
     
     /* Component backgrounds (semantic aliases) */
-    --muted: var(--surface);
-    --muted-foreground: #a8a29e;
+    --muted: var(--surface-1);
+    --muted-foreground: #b8b2ae;
     --popover: var(--elevated);
     --popover-foreground: var(--foreground);
-    --card: var(--surface);
+    --card: var(--surface-1);
     --card-foreground: var(--foreground);
     
-    /* Interactive states */
-    --accent: rgba(124, 58, 237, 0.12);  /* 12% purple tint */
-    --accent-foreground: #d4c5f9;
+    /* Interactive states with enhanced visibility */
+    --accent: rgba(147, 102, 241, 0.15);  /* 15% brighter purple tint */
+    --accent-foreground: #e4d5ff;
+    --accent-hover: rgba(147, 102, 241, 0.25);  /* Hover state */
+    --accent-active: rgba(147, 102, 241, 0.35);  /* Active state */
     
-    /* Borders and rings */
-    --border: #2a2a2d;            /* Default borders */
-    --border-subtle: #212124;     /* Very subtle dividers */
-    --border-strong: #3a3a3d;     /* Input focus borders */
+    /* Borders and rings with better contrast */
+    --border: #2e2e3f;            /* Default borders - more visible */
+    --border-subtle: #232334;     /* Subtle dividers */
+    --border-strong: #424259;     /* Input focus borders */
+    --border-glow: rgba(147, 102, 241, 0.4);  /* Glow borders */
     --input: var(--border);
-    --ring: #8b6fce;              /* Lighter purple for dark mode */
+    --ring: #a690e8;              /* Brighter purple for better visibility */
     --ring-offset-background: var(--background);
     
-    /* Primary colors - Enhanced brand visibility */
-    --primary: #9d82d6;           /* Brighter for better navbar visibility */
-    --primary-hover: #b396e3;     /* Even lighter on hover */
-    --primary-foreground: #0f0f11;
+    /* Primary colors - Maximum brand visibility */
+    --primary: #b19ce8;           /* Much brighter for excellent contrast */
+    --primary-hover: #c4b0f0;     /* Even lighter on hover */
+    --primary-active: #d4c5f9;    /* Active state */
+    --primary-foreground: #0a0a0d;
+    --primary-glow: rgba(177, 156, 232, 0.3);  /* Glow effect */
     
-    /* Status colors - 20% less saturated for dark mode */
-    --destructive: #ef6868;
-    --destructive-foreground: #0f0f11;
-    --success: #4ade80;
-    --success-foreground: #0f0f11;
-    --warning: #fb923c;
-    --warning-foreground: #0f0f11;
-    --info: #4f7ff7;
-    --info-foreground: #0f0f11;
+    /* Status colors - Optimized for dark mode visibility */
+    --destructive: #ff7b7b;
+    --destructive-foreground: #0a0a0d;
+    --destructive-glow: rgba(255, 123, 123, 0.25);
+    --success: #5ce88f;
+    --success-foreground: #0a0a0d;
+    --success-glow: rgba(92, 232, 143, 0.25);
+    --warning: #ffad4f;
+    --warning-foreground: #0a0a0d;
+    --warning-glow: rgba(255, 173, 79, 0.25);
+    --info: #6b9fff;
+    --info-foreground: #0a0a0d;
+    --info-glow: rgba(107, 159, 255, 0.25);
     
     /* Secondary colors */
     --secondary: var(--surface);
     --secondary-foreground: var(--foreground);
     
-    /* Text hierarchy with opacity */
-    --text-primary: rgba(232, 230, 227, 0.95);
-    --text-secondary: rgba(232, 230, 227, 0.70);
-    --text-tertiary: rgba(232, 230, 227, 0.50);
-    --text-disabled: rgba(232, 230, 227, 0.30);
+    /* Text hierarchy with improved contrast */
+    --text-primary: rgba(241, 239, 236, 1.0);    /* Full opacity for headers */
+    --text-secondary: rgba(241, 239, 236, 0.85); /* Better readability */
+    --text-tertiary: rgba(241, 239, 236, 0.65);  /* Still readable */
+    --text-disabled: rgba(241, 239, 236, 0.35);
+    --text-bright: #ffffff;                       /* For emphasis */
     
-    /* Effects - No shadows in dark mode, use glows instead */
-    --shadow-sm: none;
-    --shadow-md: none;
-    --shadow-lg: none;
-    --shadow-xl: none;
-    --glow-sm: 0 0 10px rgba(139, 111, 206, 0.1);
-    --glow-md: 0 0 20px rgba(139, 111, 206, 0.15);
-    --glow-focus: 0 0 0 2px rgba(139, 111, 206, 0.5);
+    /* Effects - Enhanced glows and subtle shadows for depth */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.6);
+    --glow-sm: 0 0 15px rgba(177, 156, 232, 0.15);
+    --glow-md: 0 0 30px rgba(177, 156, 232, 0.2);
+    --glow-lg: 0 0 45px rgba(177, 156, 232, 0.25);
+    --glow-focus: 0 0 0 3px rgba(177, 156, 232, 0.6);
+    --inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
     
-    /* Architectural Gradients - Dark Mode */
-    --gradient-tower: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 50%, rgba(157, 130, 214, 0.8) 100%);
-    --gradient-depth: linear-gradient(180deg, var(--surface) 0%, var(--elevated) 100%);
-    --gradient-accent: linear-gradient(45deg, var(--accent) 0%, transparent 60%);
-    --header-gradient: linear-gradient(135deg, var(--surface) 0%, var(--elevated) 50%, rgba(157, 130, 214, 0.08) 100%);
-    --card-gradient-subtle: linear-gradient(135deg, rgba(157, 130, 214, 0.03) 0%, transparent 60%);
+    /* Architectural Gradients - Enhanced for visual hierarchy */
+    --gradient-tower: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 50%, rgba(177, 156, 232, 0.9) 100%);
+    --gradient-depth: linear-gradient(180deg, var(--surface-1) 0%, var(--surface-2) 100%);
+    --gradient-accent: linear-gradient(45deg, var(--accent) 0%, transparent 70%);
+    --gradient-card: linear-gradient(145deg, var(--surface-1) 0%, rgba(35, 35, 52, 0.5) 100%);
+    --gradient-hover: linear-gradient(145deg, var(--surface-2) 0%, rgba(45, 45, 66, 0.6) 100%);
+    --header-gradient: linear-gradient(135deg, var(--surface-1) 0%, var(--surface-2) 50%, rgba(177, 156, 232, 0.1) 100%);
+    --card-gradient-subtle: linear-gradient(135deg, rgba(177, 156, 232, 0.05) 0%, transparent 70%);
+    --gradient-shine: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.03) 50%, transparent 60%);
   }
 }
 

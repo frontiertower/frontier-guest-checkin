@@ -39,7 +39,11 @@ export function Logo({ size = "md", className, priority = false }: LogoProps) {
       alt="Frontier Tower Logo"
       width={config.width}
       height={config.height}
-      className={cn(config.className, "object-contain", className)}
+      className={cn(
+        config.className, 
+        "object-contain transition-transform duration-300 hover:scale-105",
+        className
+      )}
       priority={priority}
     />
   );

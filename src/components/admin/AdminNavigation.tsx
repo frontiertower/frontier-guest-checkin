@@ -63,7 +63,7 @@ export function AdminNavigation({ activeTab, onTabChange }: AdminNavigationProps
                         onTabChange(tab.id);
                         setMobileMenuOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
+                      className={`w-full text-left px-3 py-2 rounded-md transition-colors cursor-pointer ${
                         activeTab === tab.id
                           ? 'bg-primary/10 text-primary font-medium'
                           : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -86,7 +86,7 @@ export function AdminNavigation({ activeTab, onTabChange }: AdminNavigationProps
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`admin-tab-button ${activeTab === tab.id ? 'active' : ''}`}
+              className={`admin-tab-button cursor-pointer ${activeTab === tab.id ? 'active' : ''}`}
             >
               {tab.label}
             </button>

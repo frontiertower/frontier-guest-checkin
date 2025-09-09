@@ -75,6 +75,7 @@ export function CreateInvitationForm({ onInvitationCreated }: { onInvitationCrea
               placeholder="guest@example.com"
               required
               disabled={isLoading}
+              className="bg-surface-0/50 border-border/50 hover:bg-surface-1/50 hover:border-primary/30 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-surface-1/50 transition-all"
             />
           </div>
 
@@ -86,43 +87,58 @@ export function CreateInvitationForm({ onInvitationCreated }: { onInvitationCrea
               value={formData.inviteDate}
               onChange={(e) => setFormData({ ...formData, inviteDate: e.target.value })}
               disabled={isLoading}
+              className="bg-surface-0/50 border-border/50 hover:bg-surface-1/50 hover:border-primary/30 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-surface-1/50 transition-all"
             />
           </div>
         </div>
 
         <div className="pt-6">
-          <div className="bg-muted border border-border rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
-              <span className="text-sm font-semibold text-foreground">
-                How it works
-              </span>
+          <div className="bg-gradient-to-br from-surface-1/50 to-surface-2/30 border border-border/30 rounded-xl p-5 shadow-inner">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+                <span className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-sm shadow-primary"></span>
+                <span className="text-sm font-semibold text-primary">
+                  How it works
+                </span>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-muted-foreground/10 rounded-lg flex items-center justify-center">
-                  <Mail className="h-4 w-4 text-primary" />
+              <div className="flex items-start gap-3 group hover:scale-[1.02] transition-transform">
+                <div className="relative">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-60 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative flex-shrink-0 w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center shadow-sm">
+                    <Mail className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-primary rounded-full shadow-sm shadow-primary/50" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">Email sent</p>
+                  <p className="text-sm font-semibold text-foreground">1. Email sent</p>
                   <p className="text-xs text-muted-foreground">Guest receives invitation</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-muted-foreground/10 rounded-lg flex items-center justify-center">
-                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <div className="flex items-start gap-3 group hover:scale-[1.02] transition-transform">
+                <div className="relative">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-success/20 to-success/10 rounded-lg blur opacity-60 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative flex-shrink-0 w-10 h-10 bg-gradient-to-br from-success/20 to-success/10 rounded-lg flex items-center justify-center shadow-sm">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-success rounded-full shadow-sm shadow-success/50" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">Profile & terms</p>
+                  <p className="text-sm font-semibold text-foreground">2. Profile & terms</p>
                   <p className="text-xs text-muted-foreground">Guest completes signup</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-muted-foreground/10 rounded-lg flex items-center justify-center">
-                  <QrCode className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <div className="flex items-start gap-3 group hover:scale-[1.02] transition-transform">
+                <div className="relative">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-success/20 to-success/10 rounded-lg blur opacity-60 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative flex-shrink-0 w-10 h-10 bg-gradient-to-br from-success/20 to-success/10 rounded-lg flex items-center justify-center shadow-sm">
+                    <QrCode className="h-4 w-4 text-success" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-success rounded-full animate-pulse shadow-sm shadow-success/50" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">Ready to scan</p>
+                  <p className="text-sm font-semibold text-foreground">3. Ready to scan</p>
                   <p className="text-xs text-muted-foreground">Appears in your QR above</p>
                 </div>
               </div>
@@ -134,17 +150,21 @@ export function CreateInvitationForm({ onInvitationCreated }: { onInvitationCrea
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-md transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="w-full bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary text-primary-foreground font-semibold py-5 px-6 rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-primary/30 cursor-pointer disabled:from-muted disabled:to-muted disabled:text-muted-foreground disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none group"
           >
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-4">
               {isLoading ? (
                 <>
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <div className="p-2 rounded-lg bg-white/10 backdrop-blur-sm">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
                   <span className="text-lg font-bold">Sending Invitation...</span>
                 </>
               ) : (
                 <>
-                  <Mail className="h-6 w-6" />
+                  <div className="p-2 rounded-lg bg-white/10 backdrop-blur-sm group-hover:bg-white/20 transition-colors">
+                    <Mail className="h-6 w-6" />
+                  </div>
                   <span className="text-lg font-bold">Send Invitation</span>
                 </>
               )}
