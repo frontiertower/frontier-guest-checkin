@@ -12,6 +12,14 @@ import type {
   SearchResult
 } from '@/types/admin';
 
+interface LocationContext {
+  isSingleLocation: boolean;
+  locationName: string | null;
+  locationCount: number;
+  locationPhrase: string;
+  locationDescription: string;
+}
+
 interface AdminDataContextType {
   // Data
   stats: AdminStats | null;
@@ -25,6 +33,7 @@ interface AdminDataContextType {
   // Location state
   selectedLocationId: string;
   setSelectedLocationId: (locationId: string) => void;
+  getLocationContext: () => LocationContext;
   
   // Loading states
   isLoadingStats: boolean;
@@ -493,6 +502,27 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [selectedLocationId]);
   
+  // Helper function to get location context for UI copy
+  const getLocationContext = useCallback(() => {
+    const isSingleLocation = selectedLocationId && selectedLocationId !== 'all';
+    const locations = stats?.locations || [];
+    const currentLocation = isSingleLocation 
+      ? locations.find(loc => loc.id === selectedLocationId)
+      : null;
+    
+    return {
+      isSingleLocation,
+      locationName: currentLocation?.name || null,
+      locationCount: locations.length,
+      locationPhrase: isSingleLocation 
+        ? `at ${currentLocation?.name || 'this location'}`
+        : `across all ${locations.length || ''} locations`,
+      locationDescription: isSingleLocation
+        ? currentLocation?.name || 'Location'
+        : 'All Locations'
+    };
+  }, [selectedLocationId, stats]);
+  
   const value: AdminDataContextType = {
     // Data
     stats,
@@ -506,6 +536,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
     // Location state
     selectedLocationId,
     setSelectedLocationId,
+    getLocationContext,
     
     // Loading states
     isLoadingStats,

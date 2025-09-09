@@ -12,7 +12,8 @@ interface ReportsTabProps {
 }
 
 export default function ReportsTab({ isActive = false }: ReportsTabProps) {
-  const { executiveReport, isLoadingReport, loadExecutiveReport } = useAdminData();
+  const { executiveReport, isLoadingReport, loadExecutiveReport, getLocationContext } = useAdminData();
+  const locationContext = getLocationContext();
   const [reportPeriod, setReportPeriod] = useState('weekly');
 
   // Load report when tab becomes active and we don't have cached data
@@ -72,7 +73,11 @@ export default function ReportsTab({ isActive = false }: ReportsTabProps) {
               <FileText className="h-5 w-5" />
               Executive Summary Reports
             </CardTitle>
-            <CardDescription>Comprehensive analytics and business insights</CardDescription>
+            <CardDescription>
+              {locationContext.isSingleLocation 
+                ? `Analytics for ${locationContext.locationName}`
+                : `Cross-location analytics (${locationContext.locationCount} locations)`}
+            </CardDescription>
           </div>
           <Select value={reportPeriod} onValueChange={setReportPeriod}>
             <SelectTrigger className="w-40">

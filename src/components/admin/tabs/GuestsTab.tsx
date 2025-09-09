@@ -29,7 +29,8 @@ interface GuestsTabProps {
 }
 
 export default function GuestsTab({ onViewJourney, isActive = false }: GuestsTabProps) {
-  const { guests, isLoadingGuests, loadGuests, blacklistToggle } = useAdminData();
+  const { guests, isLoadingGuests, loadGuests, blacklistToggle, getLocationContext } = useAdminData();
+  const locationContext = getLocationContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [showBlacklisted, setShowBlacklisted] = useState(false);
   const [quickFilter, setQuickFilter] = useState('all');
@@ -113,7 +114,11 @@ export default function GuestsTab({ onViewJourney, isActive = false }: GuestsTab
     <Card>
       <CardHeader>
         <CardTitle>Guest Management</CardTitle>
-        <CardDescription>Search and manage guest accounts</CardDescription>
+        <CardDescription>
+          {locationContext.isSingleLocation 
+            ? `Guests who have visited ${locationContext.locationName}`
+            : `All guests ${locationContext.locationPhrase}`}
+        </CardDescription>
         <div className="flex flex-wrap gap-2">
           <div className="relative flex-1 min-w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />

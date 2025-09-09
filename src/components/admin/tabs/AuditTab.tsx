@@ -12,7 +12,8 @@ interface AuditTabProps {
 }
 
 export default function AuditTab({ recentOverrides, isActive = false }: AuditTabProps) {
-  const { stats, isLoadingStats, loadStats } = useAdminData();
+  const { stats, isLoadingStats, loadStats, getLocationContext } = useAdminData();
+  const locationContext = getLocationContext();
   
   // Use provided overrides or from stats
   const overrides = recentOverrides || stats?.recentOverrides || [];
@@ -55,7 +56,11 @@ export default function AuditTab({ recentOverrides, isActive = false }: AuditTab
     <Card>
       <CardHeader>
         <CardTitle>Recent Override Activities</CardTitle>
-        <CardDescription>Security override actions in the last 30 days</CardDescription>
+        <CardDescription>
+          {locationContext.isSingleLocation 
+            ? `Security overrides at ${locationContext.locationName} (last 30 days)`
+            : `Security overrides ${locationContext.locationPhrase} (last 30 days)`}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {overrides && overrides.length > 0 ? (

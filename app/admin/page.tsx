@@ -331,9 +331,11 @@ function AdminPageContent() {
 
         {/* Global Search */}
         <PageCard 
-          title="Global Search" 
-          description="Search across guests, hosts, and visits"
-          icon={Globe}
+          title={selectedLocationId === 'all' || !selectedLocationId ? "Global Search" : "Location Search"}
+          description={selectedLocationId === 'all' || !selectedLocationId 
+            ? `Search across all ${stats?.locations?.length || ''} locations`
+            : `Search within ${stats?.locations?.find(l => l.id === selectedLocationId)?.name || 'this location'}`}
+          icon={selectedLocationId === 'all' || !selectedLocationId ? Globe : Search}
         >
           <div className="flex gap-2">
             <SearchInput

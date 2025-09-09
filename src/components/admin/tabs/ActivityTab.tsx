@@ -34,7 +34,8 @@ interface ActivityTabProps {
 }
 
 export default function ActivityTab({ isActive = false }: ActivityTabProps) {
-  const { activities, isLoadingActivities, loadActivities } = useAdminData();
+  const { activities, isLoadingActivities, loadActivities, getLocationContext } = useAdminData();
+  const locationContext = getLocationContext();
 
   // Load activities when tab becomes active and we don't have cached data
   useEffect(() => {
@@ -118,7 +119,11 @@ export default function ActivityTab({ isActive = false }: ActivityTabProps) {
               <Activity className="h-5 w-5" />
               Live Activity Feed
             </CardTitle>
-            <CardDescription>Recent guest activity</CardDescription>
+            <CardDescription>
+              {locationContext.isSingleLocation 
+                ? `Recent activity at ${locationContext.locationName}`
+                : `Recent activity ${locationContext.locationPhrase}`}
+            </CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="flex items-center gap-1">

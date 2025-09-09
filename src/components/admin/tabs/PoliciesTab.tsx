@@ -13,7 +13,8 @@ interface PoliciesTabProps {
 }
 
 export default function PoliciesTab({ isActive = false }: PoliciesTabProps) {
-  const { policies, isLoadingPolicies, loadPolicies, updatePolicies } = useAdminData();
+  const { policies, isLoadingPolicies, loadPolicies, updatePolicies, getLocationContext } = useAdminData();
+  const locationContext = getLocationContext();
   const [policyForm, setPolicyForm] = useState({
     guestMonthlyLimit: 3,
     hostConcurrentLimit: 3
@@ -77,7 +78,9 @@ export default function PoliciesTab({ isActive = false }: PoliciesTabProps) {
           System Policies
         </CardTitle>
         <CardDescription>
-          Configure business rules and limits for the guest check-in system
+          {locationContext.isSingleLocation 
+            ? `Configure business rules for ${locationContext.locationName}`
+            : `Configure global business rules for all locations`}
         </CardDescription>
       </CardHeader>
       <CardContent>

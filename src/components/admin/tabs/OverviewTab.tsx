@@ -12,7 +12,8 @@ interface OverviewTabProps {
 }
 
 export default function OverviewTab({ onDataLoaded }: OverviewTabProps) {
-  const { stats, isLoadingStats, loadStats, selectedLocationId } = useAdminData();
+  const { stats, isLoadingStats, loadStats, selectedLocationId, getLocationContext } = useAdminData();
+  const locationContext = getLocationContext();
 
   // Load stats when component mounts, but only if we don't have cached data
   useEffect(() => {
@@ -108,7 +109,9 @@ export default function OverviewTab({ onDataLoaded }: OverviewTabProps) {
           <CardContent>
             <div className="text-2xl font-bold">{stats.overview.totalGuests}</div>
             <p className="text-xs text-muted-foreground">
-              Registered visitors
+              {locationContext.isSingleLocation 
+                ? `Registered at ${locationContext.locationName}`
+                : `Total across all locations`}
             </p>
           </CardContent>
         </Card>
@@ -121,7 +124,9 @@ export default function OverviewTab({ onDataLoaded }: OverviewTabProps) {
           <CardContent>
             <div className="text-2xl font-bold">{stats.overview.activeVisits}</div>
             <p className="text-xs text-muted-foreground">
-              Currently in building
+              {locationContext.isSingleLocation 
+                ? `Currently at ${locationContext.locationName}`
+                : `Currently ${locationContext.locationPhrase}`}
             </p>
           </CardContent>
         </Card>
@@ -158,7 +163,11 @@ export default function OverviewTab({ onDataLoaded }: OverviewTabProps) {
         <Card>
           <CardHeader>
             <CardTitle>Top Hosts</CardTitle>
-            <CardDescription>Most active hosts by visit count</CardDescription>
+            <CardDescription>
+              {locationContext.isSingleLocation 
+                ? `Most active hosts at ${locationContext.locationName}`
+                : `Most active hosts ${locationContext.locationPhrase}`}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -183,7 +192,11 @@ export default function OverviewTab({ onDataLoaded }: OverviewTabProps) {
         <Card>
           <CardHeader>
             <CardTitle>Weekly Trend</CardTitle>
-            <CardDescription>Daily visit counts for the past week</CardDescription>
+            <CardDescription>
+              {locationContext.isSingleLocation 
+                ? `Daily visits at ${locationContext.locationName}`
+                : `Daily visits ${locationContext.locationPhrase}`}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
