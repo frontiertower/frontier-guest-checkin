@@ -91,35 +91,40 @@ describe('API Integration Tests', () => {
     });
 
     it('should handle QR token with guest batch payload', async () => {
-      const guests = dataHelpers.generateGuestBatch(2, 'qr');
+      // Create 2 test guests
+      const guestData = [
+        { email: 'qr1@test.example.com', name: 'QR Guest 1' },
+        { email: 'qr2@test.example.com', name: 'QR Guest 2' },
+      ];
       
-      // Create guests in database
-      for (const guest of guests) {
-        const guestData = TestDataFactory.createGuest({
-          email: guest.email,
-          name: guest.name,
+      const guests = [];
+      for (const data of guestData) {
+        const guest = await prisma.guest.create({ data: createTestGuest(data) });
+        await prisma.acceptance.create({
+          data: {
+            id: faker.string.uuid(),
+            guestId: guest.id,
+            acceptedAt: new Date(),
+          },
         });
-        await testDb.getPrisma().guest.create({ data: guestData });
-        await testDb.getPrisma().acceptance.create({
-          data: TestDataFactory.createAcceptance(guestData.id),
-        });
+        guests.push(guest);
       }
 
-      const qrPayload = QRPayloadGenerator.createMultiGuestPayload(guests, {
-        hostId: testData.host.id,
+      // Create QR payload in expected format
+      const qrPayload = JSON.stringify({
+        guests: guests.map(g => ({ e: g.email, n: g.name })),
       });
 
-      const { status, data } = await httpHelpers.makePostRequest(`${API_BASE}/api/checkin`, {
+      const { status, data } = await makeApiRequest(`${API_BASE}/api/checkin`, {
         token: qrPayload,
-        hostId: testData.host.id,
-        locationId: testData.location.id,
+        hostId: host.id,
+        locationId: location.id,
       });
 
       expect(status).toBe(200);
-      assertions.expectApiSuccess(data, (response) => {
-        expect(response.results).toHaveLength(2);
-        expect(response.summary.successful).toBe(2);
-      });
+      expect(data.success).toBe(true);
+      expect(data.results).toHaveLength(2);
+      expect(data.summary.successful).toBe(2);
     });
 
     it('should handle capacity limit violations with proper error messages', async () => {
@@ -302,24 +307,25 @@ describe('API Integration Tests', () => {
     });
 
     it('should create multi-guest invitations', async () => {
-      const guests = dataHelpers.generateGuestBatch(3, 'multi-invite');
+      const guests = [
+        { email: 'multi1@test.example.com', name: 'Multi Guest 1', phone: '+1234567891' },
+        { email: 'multi2@test.example.com', name: 'Multi Guest 2', phone: '+1234567892' },
+        { email: 'multi3@test.example.com', name: 'Multi Guest 3', phone: '+1234567893' },
+      ];
 
-      const { status, data } = await httpHelpers.makePostRequest(`${API_BASE}/api/invitations`, {
+      const { status, data } = await makeApiRequest(`${API_BASE}/api/invitations`, {
         guests,
-        hostId: testData.host.id,
-        locationId: testData.location.id,
+        hostId: host.id,
+        locationId: location.id,
       });
 
       expect(status).toBe(200);
-      assertions.expectApiSuccess(data, (response) => {
-        expect(response.invitations).toHaveLength(3);
-        expect(response.qrCodes).toHaveLength(3);
-      });
+      expect(data.success).toBe(true);
+      expect(data.invitations).toHaveLength(3);
+      expect(data.qrCodes).toHaveLength(3);
 
       // Verify all invitations were created
-      const invitations = await testDb.getPrisma().invitation.findMany({
-        where: { hostId: testData.host.id },
-      });
+      const invitations = await prisma.invitation.findMany({ where: { hostId: host.id } });
       expect(invitations).toHaveLength(3);
       expect(invitations.every(i => i.status === 'PENDING')).toBe(true);
     });
@@ -333,25 +339,27 @@ describe('API Integration Tests', () => {
     });
 
     it('should handle malformed QR payloads gracefully', async () => {
-      const { status, data } = await httpHelpers.makePostRequest(`${API_BASE}/api/checkin`, {
+      const { status, data } = await makeApiRequest(`${API_BASE}/api/checkin`, {
         token: '{"malformed": json}', // Invalid JSON
-        hostId: testData.host.id,
-        locationId: testData.location.id,
+        hostId: host.id,
+        locationId: location.id,
       });
 
       expect(status).toBe(400);
-      assertions.expectApiError(data, /invalid.*format/i);
+      expect(data.success).toBe(false);
+      expect(data.error || data.message).toMatch(/invalid.*format/i);
     });
 
     it('should handle missing required fields', async () => {
-      const { status, data } = await httpHelpers.makePostRequest(`${API_BASE}/api/checkin`, {
+      const { status, data } = await makeApiRequest(`${API_BASE}/api/checkin`, {
         // Missing guest data entirely
-        hostId: testData.host.id,
-        locationId: testData.location.id,
+        hostId: host.id,
+        locationId: location.id,
       });
 
       expect(status).toBe(400);
-      assertions.expectApiError(data, /missing.*guest/i);
+      expect(data.success).toBe(false);
+      expect(data.error || data.message).toMatch(/missing.*guest/i);
     });
 
     it('should handle invalid host ID', async () => {
@@ -371,10 +379,27 @@ describe('API Integration Tests', () => {
       assertions.expectApiError(data, /host.*not.*found/i);
     });
 
-    it('should handle database transaction failures gracefully', async () => {
-      // This test would require mocking database failures
-      // For now, we'll test the happy path and rely on unit tests for error scenarios
-      expect(true).toBe(true);
+    it('should handle non-existent location gracefully', async () => {
+      const guest = await prisma.guest.create({ 
+        data: createTestGuest({ email: 'invalid-location@test.example.com' }) 
+      });
+      await prisma.acceptance.create({
+        data: {
+          id: faker.string.uuid(),
+          guestId: guest.id,
+          acceptedAt: new Date(),
+        },
+      });
+
+      const { status, data } = await makeApiRequest(`${API_BASE}/api/checkin`, {
+        guest: { e: guest.email, n: guest.name },
+        hostId: host.id,
+        locationId: 'non-existent-location',
+      });
+
+      expect(status).toBe(404);
+      expect(data.success).toBe(false);
+      expect(data.error || data.message).toMatch(/location.*not.*found/i);
     });
   });
 });

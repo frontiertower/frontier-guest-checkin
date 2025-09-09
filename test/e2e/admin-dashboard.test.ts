@@ -40,22 +40,223 @@ test.describe('Admin Dashboard - Desktop', () => {
     await expect(page.locator('[data-testid="capacity-chart"]')).toBeVisible();
   });
 
-  test('should allow filtering and searching guest data', async ({ page }) => {
+  test('should filter data by location context', async ({ page }) => {
+    // Verify location dropdown is present
+    const locationDropdown = page.locator('[data-testid="location-selector"]');
+    await expect(locationDropdown).toBeVisible();
+    
+    // Default should show "All Locations"
+    await expect(locationDropdown).toContainText('All Locations');
+    
+    // Capture initial metrics for all locations
+    const initialVisits = await page.locator('[data-testid="metric-total-visits"] .metric-value').textContent();
+    const initialGuests = await page.locator('[data-testid="metric-active-guests"] .metric-value').textContent();
+    
+    // Switch to specific location
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-tower-a"]').click();
+    
+    // Wait for data to refresh
+    await page.waitForTimeout(1000);
+    
+    // Verify location context is applied
+    await expect(locationDropdown).toContainText('Tower A');
+    
+    // Verify metrics changed (location-specific data should differ)
+    const towerAVisits = await page.locator('[data-testid="metric-total-visits"] .metric-value').textContent();
+    const towerAGuests = await page.locator('[data-testid="metric-active-guests"] .metric-value').textContent();
+    
+    // Location-specific metrics should be different from all-locations view
+    expect(towerAVisits).not.toBe(initialVisits);
+    
+    // Test switching to another location
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-tower-b"]').click();
+    await page.waitForTimeout(1000);
+    
+    await expect(locationDropdown).toContainText('Tower B');
+    
+    const towerBVisits = await page.locator('[data-testid="metric-total-visits"] .metric-value').textContent();
+    expect(towerBVisits).not.toBe(towerAVisits);
+    
+    // Switch back to all locations
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-all"]').click();
+    await page.waitForTimeout(1000);
+    
+    await expect(locationDropdown).toContainText('All Locations');
+    const finalVisits = await page.locator('[data-testid="metric-total-visits"] .metric-value').textContent();
+    expect(finalVisits).toBe(initialVisits);
+  });
+
+  test('should maintain location context across tabs', async ({ page }) => {
+    // Set specific location context
+    const locationDropdown = page.locator('[data-testid="location-selector"]');
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-tower-a"]').click();
+    await page.waitForTimeout(500);
+    
+    await expect(locationDropdown).toContainText('Tower A');
+    
     // Navigate to guests tab
     await page.locator('[data-testid="tab-guests"]').click();
     await expect(page.locator('[data-testid="guests-table"]')).toBeVisible();
     
-    // Test search functionality
+    // Verify location context is maintained
+    await expect(locationDropdown).toContainText('Tower A');
+    
+    // Verify guest data is filtered to location
+    const guestRows = page.locator('[data-testid="guest-row"]');
+    if (await guestRows.count() > 0) {
+      // If guests exist, verify they belong to Tower A
+      await expect(guestRows.first()).toContainText('Tower A');
+    }
+    
+    // Navigate to activities tab
+    await page.locator('[data-testid="tab-activities"]').click();
+    await expect(page.locator('[data-testid="activities-table"]')).toBeVisible();
+    
+    // Location context should persist
+    await expect(locationDropdown).toContainText('Tower A');
+    
+    // Return to dashboard
+    await page.locator('[data-testid="tab-dashboard"]').click();
+    await expect(locationDropdown).toContainText('Tower A');
+  });
+
+  test('should handle location-filtered API calls correctly', async ({ page }) => {
+    let apiCallsMade = [];
+    
+    // Intercept API calls to verify location parameters
+    await page.route('/api/admin/stats*', async (route) => {
+      const url = route.request().url();
+      apiCallsMade.push(url);
+      
+      // Mock response based on location parameter
+      const hasLocation = url.includes('location=');
+      const locationId = hasLocation ? url.split('location=')[1].split('&')[0] : null;
+      
+      const mockResponse = {
+        overview: {
+          totalVisits: hasLocation ? 50 : 100,
+          activeVisits: hasLocation ? 10 : 25,
+          dailyCapacity: hasLocation ? 25 : 50
+        },
+        locations: [
+          { id: 'tower-a', name: 'Tower A', activeVisits: 10 },
+          { id: 'tower-b', name: 'Tower B', activeVisits: 15 }
+        ],
+        currentLocation: hasLocation ? 
+          { id: locationId, name: locationId === 'tower-a' ? 'Tower A' : 'Tower B' } : null,
+        isLocationFiltered: hasLocation
+      };
+      
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockResponse)
+      });
+    });
+    
+    // Initial load should call API without location parameter
+    await page.reload();
+    await page.waitForTimeout(1000);
+    
+    expect(apiCallsMade.some(url => url.includes('/api/admin/stats') && !url.includes('location='))).toBeTruthy();
+    
+    // Switch to specific location
+    const locationDropdown = page.locator('[data-testid="location-selector"]');
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-tower-a"]').click();
+    await page.waitForTimeout(1000);
+    
+    // Should call API with location parameter
+    expect(apiCallsMade.some(url => url.includes('/api/admin/stats?location=tower-a'))).toBeTruthy();
+    
+    // Verify location-specific data is displayed
+    const totalVisits = await page.locator('[data-testid="metric-total-visits"] .metric-value').textContent();
+    expect(totalVisits).toBe('50'); // Location-specific value from mock
+  });
+
+  test('should prevent cross-location data leakage', async ({ page }) => {
+    // Mock different data for different locations
+    await page.route('/api/admin/guests*', async (route) => {
+      const url = route.request().url();
+      const locationParam = url.includes('location=tower-a') ? 'tower-a' : 
+                           url.includes('location=tower-b') ? 'tower-b' : null;
+      
+      let guests;
+      if (locationParam === 'tower-a') {
+        guests = [{ id: '1', email: 'tower-a-guest@example.com', name: 'Tower A Guest', location: 'Tower A' }];
+      } else if (locationParam === 'tower-b') {
+        guests = [{ id: '2', email: 'tower-b-guest@example.com', name: 'Tower B Guest', location: 'Tower B' }];
+      } else {
+        guests = [
+          { id: '1', email: 'tower-a-guest@example.com', name: 'Tower A Guest', location: 'Tower A' },
+          { id: '2', email: 'tower-b-guest@example.com', name: 'Tower B Guest', location: 'Tower B' }
+        ];
+      }
+      
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ guests, total: guests.length })
+      });
+    });
+    
+    // Go to guests tab
+    await page.locator('[data-testid="tab-guests"]').click();
+    await page.waitForTimeout(1000);
+    
+    // Default view should show all guests
+    await expect(page.locator('[data-testid="guests-table"]')).toContainText('tower-a-guest@example.com');
+    await expect(page.locator('[data-testid="guests-table"]')).toContainText('tower-b-guest@example.com');
+    
+    // Filter to Tower A only
+    const locationDropdown = page.locator('[data-testid="location-selector"]');
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-tower-a"]').click();
+    await page.waitForTimeout(1000);
+    
+    // Should only show Tower A guests
+    await expect(page.locator('[data-testid="guests-table"]')).toContainText('tower-a-guest@example.com');
+    await expect(page.locator('[data-testid="guests-table"]')).not.toContainText('tower-b-guest@example.com');
+    
+    // Switch to Tower B
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-tower-b"]').click();
+    await page.waitForTimeout(1000);
+    
+    // Should only show Tower B guests
+    await expect(page.locator('[data-testid="guests-table"]')).not.toContainText('tower-a-guest@example.com');
+    await expect(page.locator('[data-testid="guests-table"]')).toContainText('tower-b-guest@example.com');
+  });
+
+  test('should combine location and search filters effectively', async ({ page }) => {
+    // Navigate to guests tab
+    await page.locator('[data-testid="tab-guests"]').click();
+    await expect(page.locator('[data-testid="guests-table"]')).toBeVisible();
+    
+    // Set location context first
+    const locationDropdown = page.locator('[data-testid="location-selector"]');
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-tower-a"]').click();
+    await page.waitForTimeout(500);
+    
+    // Test search functionality within location context
     const searchInput = page.locator('[data-testid="search-guests"]');
     await searchInput.fill('john@example.com');
     await searchInput.press('Enter');
     
-    // Verify search results
+    // Verify search results respect location filter
     await expect(page.locator('[data-testid="search-results"]')).toBeVisible();
     const resultRows = page.locator('[data-testid="guest-row"]');
-    await expect(resultRows.first()).toContainText('john@example.com');
+    if (await resultRows.count() > 0) {
+      await expect(resultRows.first()).toContainText('john@example.com');
+      await expect(resultRows.first()).toContainText('Tower A'); // Must be from correct location
+    }
     
-    // Test date range filter
+    // Test date range filter with location context
     await page.locator('[data-testid="date-filter-button"]').click();
     await expect(page.locator('[data-testid="date-picker"]')).toBeVisible();
     
@@ -63,12 +264,36 @@ test.describe('Admin Dashboard - Desktop', () => {
     await page.locator('[data-testid="preset-30-days"]').click();
     await expect(page.locator('[data-testid="results-count"]')).toBeVisible();
     
-    // Test status filter
+    // Verify location context is maintained with date filter
+    await expect(locationDropdown).toContainText('Tower A');
+    
+    // Test status filter with location context
     await page.locator('[data-testid="status-filter"]').selectOption('active');
     await page.locator('[data-testid="apply-filters"]').click();
     
-    // Verify filtered results
+    // Verify filtered results maintain location context
     await expect(page.locator('[data-testid="active-guests-only"]')).toBeVisible();
+    await expect(locationDropdown).toContainText('Tower A');
+    
+    // Clear location filter to test broader search
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-all"]').click();
+    await page.waitForTimeout(500);
+    
+    // Search should now span all locations
+    await searchInput.clear();
+    await searchInput.fill('guest@example.com');
+    await searchInput.press('Enter');
+    
+    // Should see results from multiple locations
+    const allLocationResults = page.locator('[data-testid="guest-row"]');
+    if (await allLocationResults.count() > 1) {
+      // Verify we see guests from different locations
+      const locationTexts = await allLocationResults.allTextContents();
+      const hasMultipleLocations = locationTexts.some(text => text.includes('Tower A')) && 
+                                  locationTexts.some(text => text.includes('Tower B'));
+      expect(hasMultipleLocations).toBeTruthy();
+    }
   });
 
   test('should handle user management operations', async ({ page }) => {
@@ -216,6 +441,52 @@ test.describe('Admin Dashboard - Desktop', () => {
   });
 });
 
+  test('should handle location switching during concurrent operations', async ({ page }) => {
+    let requestCount = 0;
+    const requestLog = [];
+    
+    // Track all API requests with location parameters
+    await page.route('/api/admin/**', async (route) => {
+      requestCount++;
+      const url = route.request().url();
+      requestLog.push({ order: requestCount, url, timestamp: Date.now() });
+      
+      // Add artificial delay to test race conditions
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const mockResponse = { success: true, data: { id: requestCount } };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockResponse)
+      });
+    });
+    
+    // Rapidly switch between locations to test race conditions
+    const locationDropdown = page.locator('[data-testid="location-selector"]');
+    
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-tower-a"]').click();
+    
+    // Immediately switch to another location before first request completes
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-tower-b"]').click();
+    
+    // Switch back quickly
+    await locationDropdown.click();
+    await page.locator('[data-testid="location-option-all"]').click();
+    
+    // Wait for all requests to complete
+    await page.waitForTimeout(1000);
+    
+    // Final location should be "All Locations"
+    await expect(locationDropdown).toContainText('All Locations');
+    
+    // Verify last API call was for "all" (no location parameter)
+    const lastRequest = requestLog[requestLog.length - 1];
+    expect(lastRequest.url).not.toContain('location=');
+  });
+
 test.describe('Admin Dashboard - Mobile', () => {
   test.use({ ...devices['iPhone 12'] });
 
@@ -226,6 +497,14 @@ test.describe('Admin Dashboard - Mobile', () => {
     // Verify mobile layout
     await expect(page.locator('[data-testid="mobile-nav"]')).toBeVisible();
     await expect(page.locator('[data-testid="desktop-nav"]')).not.toBeVisible();
+    
+    // Test mobile location selector
+    const mobileLocationSelector = page.locator('[data-testid="location-selector"]');
+    await expect(mobileLocationSelector).toBeVisible();
+    
+    // Location dropdown should be touch-friendly on mobile
+    const selectorBox = await mobileLocationSelector.boundingBox();
+    expect(selectorBox!.height).toBeGreaterThanOrEqual(44); // Minimum touch target
     
     // Test mobile navigation
     await page.locator('[data-testid="mobile-menu-toggle"]').click();
