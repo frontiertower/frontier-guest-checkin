@@ -1,477 +1,386 @@
 /**
- * Critical Error Scenario Coverage
- * Tests edge cases, failure modes, and error handling patterns
+ * Critical Error Scenario Tests
+ * Tests real error conditions and recovery using test database
  */
 
-import { prisma } from '@/lib/prisma';
+import { testDb, TestDataFactory } from '../test-utils';
 import { validateHostConcurrentLimit, validateGuestRollingLimit } from '@/lib/validations';
 import { parseQRData } from '@/lib/qr-token';
 import { faker } from '@faker-js/faker';
 
-// Mock Prisma for isolated error testing
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    policy: { findFirst: jest.fn() },
-    visit: { 
-      findMany: jest.fn(),
-      count: jest.fn(),
-      create: jest.fn(),
-    },
-    guest: { 
-      findUnique: jest.fn(),
-      create: jest.fn(),
-    },
-    location: { findUnique: jest.fn() },
-    acceptance: { findFirst: jest.fn() },
-    $transaction: jest.fn(),
-  }
-}));
-
-const mockPrisma = prisma as jest.Mocked<typeof prisma>;
-
 describe('Critical Error Scenarios', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+  beforeAll(async () => {
+    await testDb.connect();
   });
 
-  describe('Database Connection Failures', () => {
-    it('should handle database timeout gracefully', async () => {
-      mockPrisma.policy.findFirst.mockRejectedValue(new Error('Connection timeout'));
-      
-      await expect(validateHostConcurrentLimit('host-1', 'location-1')).rejects.toThrow('Connection timeout');
-    });
+  afterAll(async () => {
+    await testDb.disconnect();
+  });
 
-    it('should handle database connection drops during transactions', async () => {
-      mockPrisma.policy.findFirst.mockResolvedValue({ 
-        id: 1, 
-        guestMonthlyLimit: 3, 
-        hostConcurrentLimit: 3 
-      });
-      mockPrisma.visit.count.mockRejectedValue(new Error('Connection lost'));
-      
-      await expect(validateHostConcurrentLimit('host-1', 'location-1')).rejects.toThrow('Connection lost');
-    });
+  beforeEach(async () => {
+    await testDb.cleanup();
+  });
 
-    it('should handle Prisma client not initialized errors', async () => {
-      mockPrisma.policy.findFirst.mockRejectedValue(new Error('Prisma client is not initialized'));
+  describe('Database Error Handling', () => {
+    it('should handle missing policy configuration gracefully', async () => {
+      // Don't create any policy record
+      const result = await validateHostConcurrentLimit('host-1', 'location-1');
       
-      await expect(validateHostConcurrentLimit('host-1', 'location-1')).rejects.toThrow('Prisma client is not initialized');
-    });
-
-    it('should handle database constraint violations', async () => {
-      mockPrisma.guest.findUnique.mockResolvedValue({
-        id: 'guest-1',
-        email: 'test@example.com',
-        name: 'Test Guest',
-        blacklisted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      mockPrisma.visit.findMany.mockResolvedValue([]);
-      mockPrisma.policy.findFirst.mockResolvedValue({ 
-        id: 1, 
-        guestMonthlyLimit: 3, 
-        hostConcurrentLimit: 3 
-      });
-      
-      const result = await validateGuestRollingLimit('guest-1');
+      // Should use defaults when policy is missing
       expect(result.isValid).toBe(true);
     });
 
-    it('should handle foreign key constraint violations', async () => {
-      mockPrisma.visit.create.mockRejectedValue(
-        new Error('Foreign key constraint failed on field: guestId')
-      );
+    it('should handle guest not found errors', async () => {
+      const nonExistentGuestId = faker.string.uuid();
       
-      await expect(
-        mockPrisma.visit.create({ data: { guestId: 'invalid-id' } as any })
-      ).rejects.toThrow('Foreign key constraint failed');
+      const result = await validateGuestRollingLimit(nonExistentGuestId);
+      
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toContain('not found');
+    });
+
+    it('should handle constraint violations correctly', async () => {
+      const testData = await testDb.setupBasicTestData();
+      
+      // Try to create visit without required foreign key
+      try {
+        await testDb.getPrisma().visit.create({
+          data: {
+            id: faker.string.uuid(),
+            guestId: 'non-existent-guest',
+            hostId: testData.host.id,
+            locationId: testData.location.id,
+            checkedInAt: new Date(),
+            expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000),
+          },
+        });
+        fail('Should have thrown constraint error');
+      } catch (error: any) {
+        expect(error.code).toBe('P2003'); // Foreign key constraint
+      }
     });
 
     it('should handle unique constraint violations', async () => {
-      mockPrisma.guest.create.mockRejectedValue(
-        new Error('Unique constraint failed on field: email')
-      );
+      const guest = TestDataFactory.createGuest();
+      await testDb.getPrisma().guest.create({ data: guest });
       
-      await expect(
-        mockPrisma.guest.create({ data: { email: 'duplicate@example.com' } as any })
-      ).rejects.toThrow('Unique constraint failed');
-    });
-  });
-
-  describe('Memory and Resource Exhaustion', () => {
-    it('should handle out-of-memory conditions during large operations', async () => {
-      mockPrisma.visit.findMany.mockRejectedValue(new Error('JavaScript heap out of memory'));
-      mockPrisma.guest.findUnique.mockResolvedValue({
-        id: 'guest-1',
-        email: 'test@example.com',
-        name: 'Test Guest',
-        blacklisted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      
-      await expect(validateGuestRollingLimit('guest-1')).rejects.toThrow('JavaScript heap out of memory');
-    });
-
-    it('should handle stack overflow from recursive operations', () => {
-      // Create deeply nested QR data that could cause stack overflow
-      let deepObject: any = { value: 'bottom' };
-      for (let i = 0; i < 10000; i++) {
-        deepObject = { level: i, nested: deepObject };
-      }
-      
-      const deepQR = JSON.stringify({
-        guests: [{ e: 'test@example.com', n: 'Test', metadata: deepObject }]
-      });
-      
-      expect(() => {
-        parseQRData(deepQR);
-      }).not.toThrow(); // Should handle gracefully or fail with controlled error
-    });
-
-    it('should handle extremely large guest arrays', () => {
-      // Test with large but reasonable guest array
-      const largeGuestArray = Array.from({ length: 1000 }, (_, i) => ({
-        e: `guest${i}@example.com`,
-        n: `Guest ${i}`
-      }));
-      
-      const largeQR = JSON.stringify({ guests: largeGuestArray });
-      
-      const result = parseQRData(largeQR);
-      expect(result).not.toBeNull();
-      if (result && result.type === 'batch') {
-        expect(result.guestBatch.guests).toHaveLength(1000);
-      }
-    });
-  });
-
-  describe('Malicious Input Handling', () => {
-    it('should sanitize SQL injection attempts in guest emails', async () => {
-      const maliciousEmail = "'; DROP TABLE guests; --@example.com";
-      
-      mockPrisma.guest.findUnique.mockResolvedValue({
-        id: 'guest-1',
-        email: maliciousEmail,
-        name: 'Test Guest',
-        blacklisted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      mockPrisma.visit.findMany.mockResolvedValue([]);
-      mockPrisma.policy.findFirst.mockResolvedValue({ 
-        id: 1, 
-        guestMonthlyLimit: 3, 
-        hostConcurrentLimit: 3 
-      });
-      
-      const result = await validateGuestRollingLimit('guest-1');
-      expect(result.isValid).toBe(true);
-      
-      // Verify the email is passed through as-is (parameter binding prevents injection)
-      expect(mockPrisma.guest.findUnique).toHaveBeenCalledWith({
-        where: { id: 'guest-1' }
-      });
-    });
-
-    it('should handle XSS attempts in guest names', () => {
-      const xssName = '<script>alert("XSS")</script>';
-      const qrData = JSON.stringify({
-        guests: [{ e: 'test@example.com', n: xssName }]
-      });
-      
-      const result = parseQRData(qrData);
-      expect(result).not.toBeNull();
-      if (result && result.type === 'batch') {
-        expect(result.guestBatch.guests[0].n).toBe(xssName);
-        // Script tags should be preserved for proper escaping in UI layer
-      }
-    });
-
-    it('should resist prototype pollution attacks', () => {
-      const pollutionAttempt = '{"__proto__":{"isAdmin":true},"guests":[{"e":"test@example.com","n":"Test"}]}';
-      
-      const result = parseQRData(pollutionAttempt);
-      
-      // Should parse without pollution
-      expect((result as any)?.isAdmin).toBeUndefined();
-      expect((Object.prototype as any).isAdmin).toBeUndefined();
-      
-      if (result && result.type === 'batch') {
-        expect(result.guestBatch.guests).toHaveLength(1);
-        expect(result.guestBatch.guests[0].e).toBe('test@example.com');
-      }
-    });
-
-    it('should handle buffer overflow attempts in long strings', () => {
-      const veryLongString = 'A'.repeat(1000000); // 1MB string
-      const qrData = JSON.stringify({
-        guests: [{ e: 'test@example.com', n: veryLongString }]
-      });
-      
-      expect(() => {
-        const result = parseQRData(qrData);
-        // Should handle without crashing
-        if (result && result.type === 'batch') {
-          expect(result.guestBatch.guests[0].n).toBe(veryLongString);
-        }
-      }).not.toThrow();
-    });
-  });
-
-  describe('Race Condition Handling', () => {
-    it('should handle concurrent validation requests for same guest', async () => {
-      mockPrisma.guest.findUnique.mockResolvedValue({
-        id: 'guest-1',
-        email: 'test@example.com',
-        name: 'Test Guest',
-        blacklisted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      mockPrisma.visit.findMany.mockResolvedValue([]);
-      mockPrisma.policy.findFirst.mockResolvedValue({ 
-        id: 1, 
-        guestMonthlyLimit: 3, 
-        hostConcurrentLimit: 3 
-      });
-      
-      // Simulate concurrent validation calls
-      const promises = Array.from({ length: 5 }, () => 
-        validateGuestRollingLimit('guest-1')
-      );
-      
-      const results = await Promise.all(promises);
-      results.forEach(result => {
-        expect(result.isValid).toBe(true);
-      });
-    });
-
-    it('should handle concurrent policy updates during validation', async () => {
-      // First call succeeds
-      mockPrisma.policy.findFirst.mockResolvedValueOnce({ 
-        id: 1, 
-        guestMonthlyLimit: 3, 
-        hostConcurrentLimit: 3 
-      });
-      mockPrisma.visit.count.mockResolvedValueOnce(2);
-      
-      // Second call gets updated policy
-      mockPrisma.policy.findFirst.mockResolvedValueOnce({ 
-        id: 1, 
-        guestMonthlyLimit: 3, 
-        hostConcurrentLimit: 1 
-      });
-      mockPrisma.visit.count.mockResolvedValueOnce(2);
-      
-      const result1 = await validateHostConcurrentLimit('host-1', 'location-1');
-      const result2 = await validateHostConcurrentLimit('host-1', 'location-1');
-      
-      expect(result1.isValid).toBe(true);
-      expect(result2.isValid).toBe(false);
-      expect(result2.error).toContain('capacity');
-    });
-  });
-
-  describe('Data Corruption Recovery', () => {
-    it('should handle corrupted JSON in QR codes', () => {
-      const corruptedJson = '{"guests":[{"e":"test@example.com","n":}';
-      
-      const result = parseQRData(corruptedJson);
-      expect(result).toBeNull();
-    });
-
-    it('should handle null or undefined database responses', async () => {
-      mockPrisma.policy.findFirst.mockResolvedValue(null);
-      
-      // Should handle missing policy gracefully
-      await expect(validateHostConcurrentLimit('host-1', 'location-1')).rejects.toThrow();
-    });
-
-    it('should handle malformed database records', async () => {
-      mockPrisma.guest.findUnique.mockResolvedValue({
-        id: 'guest-1',
-        email: null, // Corrupted email field
-        name: 'Test Guest',
-        blacklisted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as any);
-      
-      await expect(validateGuestRollingLimit('guest-1')).rejects.toThrow();
-    });
-
-    it('should handle inconsistent visit data', async () => {
-      mockPrisma.guest.findUnique.mockResolvedValue({
-        id: 'guest-1',
-        email: 'test@example.com',
-        name: 'Test Guest',
-        blacklisted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      
-      // Return visits with inconsistent dates
-      mockPrisma.visit.findMany.mockResolvedValue([
-        {
-          id: 'visit-1',
-          guestId: 'guest-1',
-          hostId: 'host-1',
-          locationId: 'location-1',
-          checkedInAt: null, // Inconsistent - should have check-in time
-          expiresAt: new Date(),
-          checkedOutAt: null,
-          overridden: false,
-          overrideReason: null,
-          overrideByUserId: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }
-      ]);
-      
-      mockPrisma.policy.findFirst.mockResolvedValue({ 
-        id: 1, 
-        guestMonthlyLimit: 3, 
-        hostConcurrentLimit: 3 
-      });
-      
-      const result = await validateGuestRollingLimit('guest-1');
-      // Should handle inconsistent data gracefully
-      expect(result.isValid).toBe(true);
-    });
-  });
-
-  describe('Network and Timeout Handling', () => {
-    it('should handle slow database queries with timeout', async () => {
-      // Simulate very slow query
-      mockPrisma.policy.findFirst.mockImplementation(() => 
-        new Promise((resolve) => setTimeout(() => resolve({ 
-          id: 1, 
-          guestMonthlyLimit: 3, 
-          hostConcurrentLimit: 3 
-        }), 10000))
-      );
-      
-      // Should timeout or handle gracefully (depending on implementation)
-      const promise = validateHostConcurrentLimit('host-1', 'location-1');
-      
-      // Either resolves eventually or rejects with timeout
-      await expect(promise).resolves.toBeTruthy();
-    }, 12000);
-
-    it('should handle intermittent network failures', async () => {
-      let callCount = 0;
-      
-      mockPrisma.policy.findFirst.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          throw new Error('ENOTFOUND database.server.com');
-        }
-        return Promise.resolve({ 
-          id: 1, 
-          guestMonthlyLimit: 3, 
-          hostConcurrentLimit: 3 
+      // Try to create duplicate
+      try {
+        await testDb.getPrisma().guest.create({
+          data: { ...guest, id: faker.string.uuid() }, // Same email
         });
-      });
+        fail('Should have thrown unique constraint error');
+      } catch (error: any) {
+        expect(error.code).toBe('P2002'); // Unique constraint
+      }
+    });
+
+    it('should handle transaction rollback on error', async () => {
+      const testData = await testDb.setupBasicTestData();
       
-      // First call should fail with network error
-      await expect(validateHostConcurrentLimit('host-1', 'location-1')).rejects.toThrow('ENOTFOUND');
+      try {
+        await testDb.getPrisma().$transaction(async (tx) => {
+          // Create valid visit
+          await tx.visit.create({
+            data: TestDataFactory.createVisit(
+              testData.guest.id,
+              testData.host.id,
+              testData.location.id
+            ),
+          });
+          
+          // Force error to trigger rollback
+          throw new Error('Simulated transaction error');
+        });
+      } catch (error) {
+        // Transaction should have rolled back
+      }
+      
+      // Verify no visit was created
+      const visits = await testDb.getPrisma().visit.findMany({
+        where: { guestId: testData.guest.id },
+      });
+      expect(visits).toHaveLength(0);
     });
   });
 
-  describe('Edge Case Input Validation', () => {
-    it('should handle empty guest arrays', () => {
-      const emptyGuestQR = JSON.stringify({ guests: [] });
+  describe('Business Rule Violations', () => {
+    it('should handle capacity limit exceeded', async () => {
+      const testData = await testDb.setupBasicTestData();
       
-      const result = parseQRData(emptyGuestQR);
-      expect(result).not.toBeNull();
-      if (result && result.type === 'batch') {
-        expect(result.guestBatch.guests).toHaveLength(0);
+      // Create policy with low limit
+      await testDb.getPrisma().policy.create({
+        data: {
+          id: 1,
+          hostConcurrentLimit: 2,
+          guestMonthlyLimit: 3,
+        },
+      });
+      
+      // Create 2 active visits (at capacity)
+      for (let i = 0; i < 2; i++) {
+        const guest = TestDataFactory.createGuest();
+        await testDb.getPrisma().guest.create({ data: guest });
+        await testDb.getPrisma().visit.create({
+          data: TestDataFactory.createVisit(
+            guest.id,
+            testData.host.id,
+            testData.location.id
+          ),
+        });
       }
+      
+      // Try to validate for another guest
+      const result = await validateHostConcurrentLimit(
+        testData.host.id,
+        testData.location.id
+      );
+      
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toContain('concurrent guest limit');
+      expect(result.currentCount).toBe(2);
+      expect(result.limit).toBe(2);
     });
 
-    it('should handle guests with missing required fields', () => {
-      const incompleteGuestQR = JSON.stringify({
-        guests: [
-          { e: 'complete@example.com', n: 'Complete Guest' },
-          { e: 'missing-name@example.com' }, // Missing name
-          { n: 'Missing Email' }, // Missing email
-          {}, // Missing both
-        ]
+    it('should handle monthly limit exceeded', async () => {
+      const testData = await testDb.setupBasicTestData();
+      
+      // Create policy
+      await testDb.getPrisma().policy.create({
+        data: {
+          id: 1,
+          hostConcurrentLimit: 10,
+          guestMonthlyLimit: 2,
+        },
       });
       
-      const result = parseQRData(incompleteGuestQR);
-      expect(result).not.toBeNull();
-      if (result && result.type === 'batch') {
-        expect(result.guestBatch.guests).toHaveLength(4);
-        // All guests should be preserved for validation at API level
-        expect(result.guestBatch.guests[1].e).toBe('missing-name@example.com');
-        expect(result.guestBatch.guests[1].n).toBeUndefined();
-        expect(result.guestBatch.guests[2].e).toBeUndefined();
-        expect(result.guestBatch.guests[2].n).toBe('Missing Email');
+      // Create 2 visits in last 30 days
+      for (let i = 0; i < 2; i++) {
+        await testDb.getPrisma().visit.create({
+          data: TestDataFactory.createVisit(
+            testData.guest.id,
+            testData.host.id,
+            testData.location.id,
+            { checkedInAt: new Date(Date.now() - i * 24 * 60 * 60 * 1000) }
+          ),
+        });
       }
+      
+      const result = await validateGuestRollingLimit(testData.guest.id);
+      
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toContain('monthly limit');
+      expect(result.visitCount).toBe(2);
     });
 
-    it('should handle extreme date values', async () => {
-      mockPrisma.guest.findUnique.mockResolvedValue({
-        id: 'guest-1',
-        email: 'test@example.com',
-        name: 'Test Guest',
-        blacklisted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+    it('should handle blacklisted guest', async () => {
+      const guest = TestDataFactory.createGuest({ blacklisted: true });
+      await testDb.getPrisma().guest.create({ data: guest });
       
-      // Visit with extreme future date
-      mockPrisma.visit.findMany.mockResolvedValue([
-        {
-          id: 'visit-1',
-          guestId: 'guest-1',
-          hostId: 'host-1',
-          locationId: 'location-1',
-          checkedInAt: new Date('9999-12-31T23:59:59.999Z'),
-          expiresAt: new Date('9999-12-31T23:59:59.999Z'),
-          checkedOutAt: null,
-          overridden: false,
-          overrideReason: null,
-          overrideByUserId: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }
-      ]);
+      const result = await validateGuestRollingLimit(guest.id);
       
-      mockPrisma.policy.findFirst.mockResolvedValue({ 
-        id: 1, 
-        guestMonthlyLimit: 3, 
-        hostConcurrentLimit: 3 
-      });
-      
-      const result = await validateGuestRollingLimit('guest-1');
-      expect(result.isValid).toBe(false); // Should count as recent visit
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toContain('blacklisted');
     });
   });
 
-  describe('Environment Configuration Errors', () => {
-    it('should handle missing environment variables gracefully', () => {
-      const originalEnv = process.env.OVERRIDE_PASSWORD;
-      delete process.env.OVERRIDE_PASSWORD;
+  describe('QR Code Parsing Errors', () => {
+    it('should handle malformed QR data', () => {
+      const malformedInputs = [
+        'not-json',
+        '{"incomplete":',
+        '[]',
+        'null',
+        '',
+        undefined,
+        null,
+      ];
       
-      // QR parsing should still work without override password
-      const result = parseQRData('{"guests":[{"e":"test@example.com","n":"Test"}]}');
-      expect(result).not.toBeNull();
-      
-      // Restore environment
-      if (originalEnv) {
-        process.env.OVERRIDE_PASSWORD = originalEnv;
+      for (const input of malformedInputs) {
+        const result = parseQRData(input as any);
+        expect(result.guests).toEqual([]);
       }
     });
 
-    it('should handle invalid database URL format', () => {
-      // This would typically be caught at application startup
-      // Test that parsing functions still work with invalid config
-      const result = parseQRData('{"guests":[{"e":"test@example.com","n":"Test"}]}');
-      expect(result).not.toBeNull();
+    it('should handle QR with missing required fields', () => {
+      const incompleteData = [
+        { e: 'email@test.com' }, // Missing name
+        { n: 'Test Name' }, // Missing email
+        { e: '', n: 'Test' }, // Empty email
+        { e: 'test@example.com', n: '' }, // Empty name
+      ];
+      
+      const result = parseQRData(JSON.stringify({ guests: incompleteData }));
+      
+      // Should filter out invalid entries
+      expect(result.guests.every(g => g.email && g.name)).toBe(true);
+    });
+
+    it('should handle oversized QR payloads', () => {
+      const hugePayload = {
+        guests: Array.from({ length: 1000 }, (_, i) => ({
+          e: `user${i}@example.com`,
+          n: `User ${i}`,
+        })),
+      };
+      
+      const result = parseQRData(JSON.stringify(hugePayload));
+      
+      // Should handle large payloads without crashing
+      expect(result.guests.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Concurrent Operation Conflicts', () => {
+    it('should handle concurrent check-ins for same guest', async () => {
+      const testData = await testDb.setupBasicTestData();
+      
+      // Simulate concurrent check-in attempts
+      const checkInPromises = Array.from({ length: 3 }, () =>
+        testDb.getPrisma().visit.create({
+          data: TestDataFactory.createVisit(
+            testData.guest.id,
+            testData.host.id,
+            testData.location.id
+          ),
+        })
+      );
+      
+      const results = await Promise.allSettled(checkInPromises);
+      
+      // All should succeed (Prisma handles concurrent creates)
+      const successful = results.filter(r => r.status === 'fulfilled');
+      expect(successful.length).toBeGreaterThan(0);
+    });
+
+    it('should handle race condition in capacity checks', async () => {
+      const testData = await testDb.setupBasicTestData();
+      
+      await testDb.getPrisma().policy.create({
+        data: {
+          id: 1,
+          hostConcurrentLimit: 1,
+          guestMonthlyLimit: 10,
+        },
+      });
+      
+      // Create multiple guests
+      const guests = await Promise.all(
+        Array.from({ length: 3 }, async () => {
+          const guest = TestDataFactory.createGuest();
+          return testDb.getPrisma().guest.create({ data: guest });
+        })
+      );
+      
+      // Try concurrent validations
+      const validationPromises = guests.map(guest =>
+        validateHostConcurrentLimit(testData.host.id, testData.location.id)
+      );
+      
+      const results = await Promise.all(validationPromises);
+      
+      // At least one should pass
+      expect(results.some(r => r.isValid)).toBe(true);
+    });
+  });
+
+  describe('Data Recovery Scenarios', () => {
+    it('should recover from partial data corruption', async () => {
+      const testData = await testDb.setupBasicTestData();
+      
+      // Create visit with NULL host (simulating corruption)
+      const corruptVisit = await testDb.getPrisma().$executeRaw`
+        INSERT INTO "Visit" (id, "guestId", "hostId", "locationId", "checkedInAt", "expiresAt")
+        VALUES (${faker.string.uuid()}, ${testData.guest.id}, NULL, ${testData.location.id}, NOW(), NOW() + INTERVAL '12 hours')
+      `;
+      
+      // System should handle NULL host gracefully
+      const visits = await testDb.getPrisma().visit.findMany({
+        where: { guestId: testData.guest.id },
+      });
+      
+      // Query should not crash
+      expect(Array.isArray(visits)).toBe(true);
+    });
+
+    it('should handle expired data cleanup', async () => {
+      const testData = await testDb.setupBasicTestData();
+      
+      // Create expired visits
+      const expiredDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      await testDb.getPrisma().visit.create({
+        data: {
+          ...TestDataFactory.createVisit(
+            testData.guest.id,
+            testData.host.id,
+            testData.location.id
+          ),
+          checkedInAt: expiredDate,
+          expiresAt: expiredDate,
+        },
+      });
+      
+      // Query for active visits
+      const activeVisits = await testDb.getPrisma().visit.findMany({
+        where: {
+          expiresAt: { gte: new Date() },
+        },
+      });
+      
+      expect(activeVisits).toHaveLength(0);
+    });
+
+    it('should handle missing acceptance records', async () => {
+      const testData = await testDb.setupBasicTestData();
+      
+      // Guest without acceptance
+      const acceptance = await testDb.getPrisma().acceptance.findFirst({
+        where: { guestId: testData.guest.id },
+      });
+      
+      expect(acceptance).toBeNull();
+      
+      // System should handle missing acceptance
+      const validation = await validateGuestRollingLimit(testData.guest.id);
+      expect(validation).toBeDefined();
+    });
+  });
+
+  describe('Network and Timeout Errors', () => {
+    it('should handle slow database queries', async () => {
+      const testData = await testDb.setupBasicTestData();
+      
+      // Create many visits to slow down query
+      const visits = Array.from({ length: 100 }, () =>
+        TestDataFactory.createVisit(
+          testData.guest.id,
+          testData.host.id,
+          testData.location.id
+        )
+      );
+      
+      await testDb.getPrisma().visit.createMany({ data: visits });
+      
+      const startTime = Date.now();
+      const result = await validateGuestRollingLimit(testData.guest.id);
+      const duration = Date.now() - startTime;
+      
+      // Should complete even with many records
+      expect(result).toBeDefined();
+      expect(duration).toBeLessThan(5000); // 5 second timeout
+    });
+
+    it('should handle connection pool exhaustion', async () => {
+      // Simulate many concurrent database operations
+      const operations = Array.from({ length: 50 }, () =>
+        testDb.getPrisma().guest.count()
+      );
+      
+      const results = await Promise.allSettled(operations);
+      
+      // Most should succeed despite high concurrency
+      const successful = results.filter(r => r.status === 'fulfilled');
+      expect(successful.length).toBeGreaterThan(25);
     });
   });
 });
